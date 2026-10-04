@@ -1,0 +1,33 @@
+---
+import { getImage } from "astro:assets";
+import photo from "@/assets/moments/sky-through-leaves-1.jpeg";
+import { teamMembers } from "@/data/team.ts";
+import DevLayout from "../components/dev-layout.astro";
+import Specimen from "../components/specimen.astro";
+import Surface from "../components/surface.astro";
+import { TeamMemberCard } from "@ambar/ui/components/team-member-card";
+
+const sampleImage = await getImage({ src: photo, width: 640, format: "webp", quality: 72 });
+---
+
+<DevLayout title="Team">
+  <p slot="lead" class="max-w-2xl text-muted-foreground">
+    Portrait cards with always-visible social links, keyboard focus and a placeholder until a portrait is ready.
+  </p>
+  <Specimen title="Portrait placeholder" description="The current member, with no invented portrait or biography.">
+    <Surface tone="cloud">
+      {teamMembers.map((member) => <TeamMemberCard {...member} />)}
+    </Surface>
+    <Surface tone="ink">
+      {teamMembers.map((member) => <TeamMemberCard {...member} />)}
+    </Surface>
+  </Specimen>
+  <Specimen title="Image behavior" description="The existing landscape is a layout specimen, not a team portrait. It shows image cropping on both surfaces.">
+    <Surface tone="cloud">
+      <TeamMemberCard name="Image specimen" role="Layout preview" imageSrc={sampleImage.src} imageAlt="Looking up at the sky through leaves and branches" socialLinks={[]} />
+    </Surface>
+    <Surface tone="ink">
+      <TeamMemberCard name="Image specimen" role="Layout preview" imageSrc={sampleImage.src} imageAlt="Looking up at the sky through leaves and branches" socialLinks={[]} />
+    </Surface>
+  </Specimen>
+</DevLayout>

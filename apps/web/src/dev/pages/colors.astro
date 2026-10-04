@@ -1,0 +1,94 @@
+---
+import { buttonVariants } from "@ambar/ui/components/button";
+import reference1 from "@/assets/moments/sky-through-leaves-1.jpeg";
+import reference2 from "@/assets/moments/sky-through-leaves-2.jpeg";
+import DevLayout from "../components/dev-layout.astro";
+import Specimen from "../components/specimen.astro";
+
+const swatches = [
+  { name: "ink", hex: "#141414", swatch: "bg-ink text-cloud", role: "Primary. Text and primary button (18.4:1 on cloud)." },
+  { name: "cloud", hex: "#ffffff", swatch: "border-b bg-cloud text-ink", role: "Primary. Background and cards." },
+  { name: "sky", hex: "#93bbcb", swatch: "bg-sky text-ink", role: "Secondary, from the frames. Fills and tints with ink text (9:1). Never text." },
+  { name: "leaf", hex: "#537234", swatch: "bg-leaf text-cloud", role: "Secondary, from the frames. Text accents, links, focus, fills with cloud text (5.5:1)." },
+];
+
+const photos = [
+  { src: reference1.src, alt: "Looking up at the sky through leaves and branches, frame 1" },
+  { src: reference2.src, alt: "Looking up at the sky through leaves and branches, frame 2" },
+];
+---
+
+<DevLayout title="Colors">
+  <p slot="lead" class="max-w-2xl text-muted-foreground">
+    Black and white as primaries. Sky and leaf, taken from the reference frames, as secondaries.
+  </p>
+
+  <section class="flex flex-col gap-4">
+    <h2 class="text-xl tracking-tight">Palette</h2>
+    <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {
+        swatches.map((swatch) => (
+          <li class="flex flex-col overflow-hidden rounded-2xl border bg-card">
+            <div class:list={["flex h-24 items-end p-4 font-heading text-lg font-bold", swatch.swatch]}>
+              {swatch.name}
+            </div>
+            <div class="flex flex-col gap-1 p-4">
+              <code class="text-xs text-muted-foreground">{swatch.hex}</code>
+              <span class="text-sm">{swatch.role}</span>
+            </div>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <Specimen
+    title="Hierarchy"
+    description="Primary is ink on cloud. Sky for soft fills, leaf for words and links."
+  >
+    <div class="flex flex-wrap items-center gap-3 rounded-2xl border p-6">
+      <a href="#" class={buttonVariants()}>Keep a moment</a>
+      <a href="#" class={buttonVariants({ tone: "cloud" })}>Browse</a>
+      <a href="#" class={buttonVariants({ tone: "sky" })}>Share</a>
+      <span class="rounded-full bg-sky px-2.5 py-1 text-xs font-medium text-ink">Shared</span>
+      <a href="#" class="text-sm font-medium text-link underline-offset-4 hover:underline">View all moments</a>
+    </div>
+    <div class="flex flex-col gap-2 rounded-2xl border bg-card p-6">
+      <h3 class="text-lg">A cloud section</h3>
+      <p class="text-sm text-muted-foreground">Separated by its border on cloud.</p>
+    </div>
+  </Specimen>
+
+  <Specimen
+    title="A kept moment"
+    description="The photo sits on cloud. Black and white frame it; sky and leaf echo the photo."
+  >
+    {
+      photos.map((photo, index) => (
+        <article class="flex flex-col gap-4 rounded-2xl border bg-card p-4 text-card-foreground">
+          <img src={photo.src} alt={photo.alt} class="aspect-4/3 w-full rounded-xl object-cover" />
+          <div class="flex items-center justify-between gap-4">
+            <div class="flex flex-col">
+              <h3 class="text-lg">Under the ash tree</h3>
+              <span class="text-sm text-muted-foreground">Kept 4 Oct · Only you</span>
+            </div>
+            <a href="#" class={buttonVariants({ tone: index === 0 ? "ink" : "cloud" })}>
+              Share
+            </a>
+          </div>
+        </article>
+      ))
+    }
+  </Specimen>
+
+  <Specimen
+    title="Photo straight on cloud"
+    description="Without a card. The darkest leaves are high contrast against cloud, so the photo never dissolves."
+  >
+    <img src={photos[0]?.src} alt={photos[0]?.alt} class="aspect-3/4 w-full rounded-xl object-cover" />
+    <div class="dark flex flex-col gap-3 rounded-2xl bg-background p-6">
+      <span class="text-xs font-medium tracking-widest text-muted-foreground uppercase">ink · future dark mode</span>
+      <img src={photos[0]?.src} alt={photos[0]?.alt} class="aspect-3/4 w-full rounded-xl object-cover" />
+    </div>
+  </Specimen>
+</DevLayout>

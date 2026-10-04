@@ -1,0 +1,213 @@
+/*
+ * The only global CSS in the monorepo. Design tokens and the base shadcn needs, nothing else;
+ * everything else is written with Tailwind utilities in components.
+ */
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/figtree";
+@import "@fontsource/averia-sans-libre/700.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@source "../../../../apps/*/src/**/*.{astro,ts,tsx}";
+@source "../**/*.{ts,tsx}";
+
+/*
+ * Brand palette.
+ * Primary: ink (black) and cloud (white).
+ * Secondary, from the reference frames: sky (#93bbcb) and leaf (#537234).
+ * - ink: text, primary button. 18.4:1 on cloud.
+ * - cloud: base background, cards.
+ * - sky: fills and tints with ink text (9:1). Never text on cloud.
+ * - leaf: text accents, links, focus ring, fills with cloud text (5.5:1 both ways).
+ * Grays are cloud mixed toward ink. Destructive red (#c2412d) is functional, not brand; same value in
+ * both modes and always used as a fill with cloud text (5.1:1).
+ */
+@theme {
+  --color-ink: #141414;
+  --color-cloud: #ffffff;
+  --color-sky: #93bbcb;
+  --color-leaf: #537234;
+  /* Only for the amber specimen asset on the pricing section. Never text, never UI. */
+  --color-resin: #e09a2f;
+}
+
+@theme inline {
+  /* Figtree for body text, Averia Sans Libre (700) for headings. */
+  --font-sans: "Figtree Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Averia Sans Libre", ui-sans-serif, system-ui, sans-serif;
+  --color-link: var(--link);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* Light surface: landing and app. */
+:root {
+  --background: var(--color-cloud);
+  --foreground: var(--color-ink);
+  --card: var(--color-cloud);
+  --card-foreground: var(--color-ink);
+  --popover: var(--color-cloud);
+  --popover-foreground: var(--color-ink);
+  --primary: var(--color-ink);
+  --primary-foreground: var(--color-cloud);
+  --secondary: #f6f6f6;
+  --secondary-foreground: var(--color-ink);
+  --muted: #f6f6f6;
+  --muted-foreground: #6b6b6b;
+  --accent: #e4eef2;
+  --accent-foreground: var(--color-ink);
+  --destructive: #c2412d;
+  --border: #e8e8e8;
+  --input: #e8e8e8;
+  --ring: var(--color-leaf);
+  --link: var(--color-leaf);
+  --chart-1: var(--color-ink);
+  --chart-2: var(--color-leaf);
+  --chart-3: var(--color-sky);
+  --chart-4: #6b6b6b;
+  --chart-5: #c2412d;
+  --radius: 0.625rem;
+  --sidebar: #f6f6f6;
+  --sidebar-foreground: var(--color-ink);
+  --sidebar-primary: var(--color-ink);
+  --sidebar-primary-foreground: var(--color-cloud);
+  --sidebar-accent: #e4eef2;
+  --sidebar-accent-foreground: var(--color-ink);
+  --sidebar-border: #e8e8e8;
+  --sidebar-ring: var(--color-leaf);
+}
+
+/* Dark surface: ink. Reserved for a future dark mode. */
+.dark {
+  --background: var(--color-ink);
+  --foreground: var(--color-cloud);
+  --card: #1f1f1f;
+  --card-foreground: var(--color-cloud);
+  --popover: #1f1f1f;
+  --popover-foreground: var(--color-cloud);
+  --primary: var(--color-cloud);
+  --primary-foreground: var(--color-ink);
+  --secondary: #262626;
+  --secondary-foreground: var(--color-cloud);
+  --muted: #262626;
+  --muted-foreground: #a3a3a3;
+  --accent: #26323a;
+  --accent-foreground: var(--color-cloud);
+  --destructive: #c2412d;
+  --border: #303030;
+  --input: #303030;
+  --ring: var(--color-leaf);
+  --link: var(--color-leaf);
+  --chart-1: var(--color-cloud);
+  --chart-2: var(--color-sky);
+  --chart-3: var(--color-leaf);
+  --chart-4: #a3a3a3;
+  --chart-5: #c2412d;
+  --sidebar: #1f1f1f;
+  --sidebar-foreground: var(--color-cloud);
+  --sidebar-primary: var(--color-cloud);
+  --sidebar-primary-foreground: var(--color-ink);
+  --sidebar-accent: #26323a;
+  --sidebar-accent-foreground: var(--color-cloud);
+  --sidebar-border: #303030;
+  --sidebar-ring: var(--color-leaf);
+}
+
+/*
+ * Scroll progress drawn along an outline (the header pill). Needs @keyframes, so it lives here.
+ * Only active where scroll-driven animations exist; elsewhere the stroke keeps its initial
+ * stroke-dashoffset of 1 and stays invisible.
+ */
+@keyframes trace-outline {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@utility trace-on-scroll {
+  @supports (animation-timeline: scroll()) {
+    /* Longhands on purpose: the minifier folds a full set into the `animation` shorthand, which
+       cannot carry a timeline, and Chrome then drops the whole declaration. */
+    animation-name: trace-outline;
+    animation-timing-function: linear;
+    animation-fill-mode: both;
+    animation-timeline: scroll(root);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    scrollbar-width: thin;
+    scrollbar-color: var(--muted-foreground) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 0.5rem;
+    height: 0.5rem;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--muted-foreground);
+    border-radius: 9999px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--foreground);
+  }
+  html {
+    @apply scroll-smooth;
+  }
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-heading font-bold;
+  }
+}

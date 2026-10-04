@@ -1,0 +1,77 @@
+---
+import { CopyButton } from "@ambar/ui/components/copy-button";
+import { HoldButton } from "@ambar/ui/components/hold-button";
+import { SaveToggle } from "@ambar/ui/components/save-toggle";
+import { SegmentedControl } from "@ambar/ui/components/segmented-control";
+import { Switch } from "@ambar/ui/components/switch";
+import DevLayout from "../components/dev-layout.astro";
+import Specimen from "../components/specimen.astro";
+import Surface from "../components/surface.astro";
+import { ButtonShowcase } from "../components/button-showcase.tsx";
+
+const kinds = ["All", "Photos", "Clips", "Links"];
+
+const buttonGroups = [
+  { id: "tones", title: "Tones", description: "ink: main action. leaf: confirm, save. sky: share, soft secondary. cloud: neutral. danger: destructive." },
+  { id: "sizes", title: "Sizes", description: "sm 36px, md 40px, lg 48px." },
+  { id: "icons", title: "With icons", description: "Phosphor, bold weight, leading the label." },
+  { id: "icon-only", title: "Icon only", description: "icon-sm 36px, icon 40px, icon-lg 48px. Always with an aria-label." },
+  { id: "states", title: "States", description: "Disabled fades. Loading keeps the width, shows a spinner, sets aria-busy and ignores clicks." },
+] as const;
+
+---
+
+<DevLayout title="Buttons">
+  <p slot="lead" class="max-w-2xl text-muted-foreground">
+    Ámbar buttons and controls, all from <code class="rounded bg-muted px-1.5 py-0.5 text-sm">@ambar/ui</code>.
+  </p>
+
+  <h2 class="text-2xl tracking-tight">Button</h2>
+  {
+    buttonGroups.map((group) => (
+      <Specimen title={group.title} description={group.description}>
+        <Surface tone="cloud">
+          <ButtonShowcase group={group.id} />
+        </Surface>
+        <Surface tone="ink">
+          <ButtonShowcase group={group.id} />
+        </Surface>
+      </Specimen>
+    ))
+  }
+
+  <h2 class="text-2xl tracking-tight">Controls</h2>
+
+  <Specimen title="Copy link" description="Share a moment by link. Confirms with a check and announces “Copied” to screen readers.">
+    <Surface tone="cloud"><CopyButton client:visible value="https://ambar.page/m/example" /></Surface>
+    <Surface tone="ink"><CopyButton client:visible value="https://ambar.page/m/example" /></Surface>
+  </Specimen>
+
+  <Specimen title="Keep" description="Toggle a moment as kept. Base UI Toggle: aria-pressed, the key stays pushed in and turns leaf.">
+    <Surface tone="cloud"><SaveToggle client:visible /><SaveToggle client:visible defaultSaved /></Surface>
+    <Surface tone="ink"><SaveToggle client:visible /><SaveToggle client:visible defaultSaved /></Surface>
+  </Specimen>
+
+  <Specimen title="Filter by kind" description="Single choice among photos, clips and links. Base UI ToggleGroup: arrow keys move between segments.">
+    <Surface tone="cloud"><SegmentedControl client:visible label="Filter moments by kind" options={kinds} /></Surface>
+    <Surface tone="ink"><SegmentedControl client:visible label="Filter moments by kind" options={kinds} /></Surface>
+  </Specimen>
+
+  <Specimen title="Switch" description="On/off settings such as sharing a moment. Base UI Switch: role=switch, Space toggles.">
+    <Surface tone="cloud">
+      <Switch client:visible label="Shared" />
+      <Switch client:visible label="Shared" defaultChecked />
+      <Switch client:visible label="Disabled" disabled />
+    </Surface>
+    <Surface tone="ink">
+      <Switch client:visible label="Shared" />
+      <Switch client:visible label="Shared" defaultChecked />
+    </Surface>
+  </Specimen>
+
+  <Specimen title="Hold to delete" description="Pointer or Space/Enter held for 1.1s; release early to cancel.">
+    <Surface tone="cloud"><HoldButton client:visible /></Surface>
+    <Surface tone="ink"><HoldButton client:visible /></Surface>
+  </Specimen>
+
+</DevLayout>

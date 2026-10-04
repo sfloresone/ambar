@@ -1,0 +1,27 @@
+---
+import "@ambar/ui/globals.css";
+
+type Props = {
+  title?: string;
+  description?: string;
+};
+
+const {
+  title = "Ámbar",
+  description = "A moment kept. Still there when you look.",
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>{title}</title>
+  </head>
+  <body class="min-h-svh">
+    <slot />
+  </body>
+</html>

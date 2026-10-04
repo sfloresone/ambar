@@ -1,0 +1,19 @@
+---
+type Props = {
+  tone: "cloud" | "ink";
+};
+
+const { tone } = Astro.props;
+---
+
+<div
+  class:list={[
+    "flex flex-col gap-3 rounded-2xl border bg-background p-6 text-foreground",
+    tone === "ink" && "dark",
+  ]}
+>
+  <span class="text-xs font-medium tracking-widest text-muted-foreground uppercase">{tone}</span>
+  <div class="flex flex-wrap items-center gap-3">
+    <slot />
+  </div>
+</div>

@@ -1,0 +1,33 @@
+---
+import { buildCommit, version } from "@/lib/build-info.ts";
+import Closing from "@/sections/closing.astro";
+
+type Props = {
+  showCallToAction?: boolean;
+};
+
+const { showCallToAction = true } = Astro.props;
+
+const release = `v${version}${buildCommit ? ` · Build ${buildCommit}` : ""}`;
+---
+
+<footer class="mx-auto flex max-w-5xl flex-col gap-8 bg-cloud px-6 pb-4">
+  <Closing showCallToAction={showCallToAction} />
+  <div class="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
+    <span>© {new Date().getFullYear()} Ámbar</span>
+    <span>A moment kept. Still there when you look.</span>
+    <span class="text-xs tabular-nums">{release}</span>
+  </div>
+  <div class="grid grid-cols-[12%_minmax(0,1fr)_12%]">
+    <p class="col-start-2 font-heading text-[clamp(3rem,18vw,14rem)] leading-none font-bold tracking-tight whitespace-nowrap">
+      <span class="sr-only">Ambar</span>
+      <span aria-hidden="true" class="flex justify-center">
+        <span class="text-ink">A</span>
+        <span class="text-leaf">m</span>
+        <span class="text-sky">b</span>
+        <span class="text-leaf">a</span>
+        <span class="text-ink">r</span>
+      </span>
+    </p>
+  </div>
+</footer>

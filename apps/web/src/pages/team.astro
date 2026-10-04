@@ -1,0 +1,40 @@
+---
+import { buttonVariants } from "@ambar/ui/components/button";
+import { TeamMemberCard } from "@ambar/ui/components/team-member-card";
+import { EnvelopeSimpleIcon } from "@phosphor-icons/react/ssr";
+import SiteFooter from "@/components/site-footer.astro";
+import SiteHeader from "@/components/site-header.astro";
+import { contactEmail, teamMembers } from "@/data/team.ts";
+import Base from "@/layouts/base.astro";
+---
+
+<Base title="Team · Ámbar" description="Small moments deserve a place. Meet the person building Ámbar.">
+  <SiteHeader />
+  <main class="mx-auto flex max-w-5xl flex-col gap-16 px-6 pt-16 pb-28 sm:pt-24">
+    <section aria-labelledby="manifesto-title" class="flex flex-col gap-6">
+      <h1 class="text-sm tracking-widest text-leaf uppercase">Team</h1>
+      <h2 id="manifesto-title" class="max-w-3xl text-4xl tracking-tight text-balance sm:text-5xl">
+        Small moments deserve a place.
+      </h2>
+      <div class="flex max-w-2xl flex-col gap-4 text-lg leading-relaxed text-pretty text-muted-foreground">
+        <p>A photo, a short clip, a link worth returning to. Everyday things that are easy to lose.</p>
+        <p>
+          We’re building Ámbar to make keeping them simple, finding them again effortless, and sharing them a choice.
+        </p>
+      </div>
+    </section>
+    <section aria-labelledby="members-title" class="flex flex-col gap-8">
+      <h2 id="members-title" class="text-center text-2xl tracking-tight sm:text-3xl">The person behind Ámbar</h2>
+      <ul class="flex flex-wrap justify-center gap-8">
+        {teamMembers.map((member) => <li class="w-full max-w-80"><TeamMemberCard {...member} /></li>)}
+      </ul>
+    </section>
+    <div class="flex justify-center">
+      <a href={`mailto:${contactEmail}`} class={buttonVariants({ tone: "ink", size: "lg" })}>
+        <EnvelopeSimpleIcon weight="bold" aria-hidden className="size-5" />
+        Get in touch
+      </a>
+    </div>
+  </main>
+  <SiteFooter showCallToAction={false} />
+</Base>

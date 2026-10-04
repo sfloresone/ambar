@@ -1,0 +1,22 @@
+---
+import SiteFooter from "@/components/site-footer.astro";
+import SiteHeader from "@/components/site-header.astro";
+import Base from "@/layouts/base.astro";
+import Features from "@/sections/features.astro";
+import Hero from "@/sections/hero.astro";
+import Platforms from "@/sections/platforms.astro";
+import Pricing from "@/sections/pricing.astro";
+import TryIt from "@/sections/try-it.astro";
+---
+
+<Base>
+  <SiteHeader />
+  <main class="mx-auto flex max-w-5xl flex-col gap-28 px-6 pb-28">
+    <Hero />
+    <Features />
+    <TryIt />
+    <Platforms />
+    <Pricing />
+  </main>
+  <SiteFooter />
+</Base>

@@ -1,0 +1,26 @@
+---
+import DevLayout from "../components/dev-layout.astro";
+import { devSections } from "../sections.ts";
+---
+
+<DevLayout title="Overview">
+  <p slot="lead" class="max-w-2xl text-muted-foreground">
+    Every building block of Ámbar on both surfaces: cloud (landing and app) and ink (reserved for dark mode).
+    Only available in development.
+  </p>
+  <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    {
+      devSections.map((section) => (
+        <li>
+          <a
+            href={`/dev/${section.slug}`}
+            class="flex h-full flex-col gap-2 rounded-2xl border p-6 transition-colors hover:border-ink"
+          >
+            <span class="font-heading text-lg font-bold">{section.title}</span>
+            <span class="text-sm text-muted-foreground">{section.description}</span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</DevLayout>

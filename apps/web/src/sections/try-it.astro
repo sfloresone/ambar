@@ -1,0 +1,21 @@
+---
+import { getImage } from "astro:assets";
+import photo from "@/assets/moments/sky-through-leaves-1.jpeg";
+import clipPoster from "@/assets/moments/sky-through-leaves-2.jpeg";
+import { MomentDemo } from "@/components/moment-demo.tsx";
+
+// Resized WebP: the originals are ~500 KB each.
+const photoImage = await getImage({ src: photo, width: 920, format: "webp", quality: 72 });
+
+const clipImage = await getImage({ src: clipPoster, width: 920, format: "webp", quality: 72 });
+---
+
+<section id="try" aria-labelledby="try-title" class="flex scroll-mt-24 flex-col gap-8">
+  <div class="flex flex-col gap-3">
+    <h2 id="try-title" class="text-3xl tracking-tight sm:text-4xl">Try it</h2>
+    <p class="max-w-xl text-pretty text-muted-foreground">
+      Keep a moment and decide who sees it. Nothing leaves this page.
+    </p>
+  </div>
+  <MomentDemo client:visible photoSrc={photoImage.src} clipPosterSrc={clipImage.src} />
+</section>

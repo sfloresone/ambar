@@ -1,0 +1,79 @@
+---
+import { FirstMomentDialog } from "@ambar/ui/components/first-moment-dialog";
+import { contactEmail } from "@/data/team.ts";
+import { appUrl } from "@/lib/app-url.ts";
+
+type Props = {
+  showCallToAction?: boolean;
+};
+
+const { showCallToAction = true } = Astro.props;
+
+const home = Astro.url.pathname === "/" ? "" : "/";
+
+const currentPath = Astro.url.pathname.replace(/\/$/, "");
+
+type FooterGroup = {
+  title: string;
+  links: { label: string; href?: string }[];
+};
+
+const groups: FooterGroup[] = [
+  {
+    title: "Explore",
+    links: [
+      { label: "Features", href: `${home}#features` },
+      { label: "Platforms", href: `${home}#platforms` },
+      { label: "Pricing", href: `${home}#pricing` },
+      { label: "Updates" },
+    ],
+  },
+  {
+    title: "About",
+    links: [{ label: "Team", href: "/team" }, { label: "Contact", href: `mailto:${contactEmail}` }],
+  },
+  {
+    title: "Legal",
+    links: [{ label: "Privacy" }, { label: "Terms" }],
+  },
+];
+---
+
+<section aria-labelledby={showCallToAction ? "closing-title" : undefined} class="flex flex-col gap-8 rounded-3xl bg-ink p-8 text-cloud sm:p-12">
+  {
+    showCallToAction && (
+      <div class="flex flex-col items-start gap-6">
+        <h2 id="closing-title" class="max-w-xl text-3xl tracking-tight text-balance sm:text-4xl">
+          Keep your first moment today.
+        </h2>
+        <FirstMomentDialog client:idle continueHref={appUrl} tone="cloud" />
+      </div>
+    )
+  }
+  <nav aria-label="Footer" class:list={["grid gap-8 sm:grid-cols-3", showCallToAction && "border-t border-cloud/15 pt-8"]}>
+    {
+      groups.map((group) => (
+        <div class="flex flex-col gap-4">
+          <h3 class="text-lg">{group.title}</h3>
+          <ul class="flex flex-col gap-3 text-sm">
+            {group.links.map((link) => (
+              <li>
+                {link.href ? (
+                  <a
+                    href={link.href}
+                    aria-current={link.href === currentPath ? "page" : undefined}
+                    class="rounded-sm text-cloud/85 underline-offset-4 outline-hidden hover:text-cloud hover:underline focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-4 focus-visible:outline-cloud"
+                  >
+                    {link.label}
+                  </a>
+                ) : (
+                  <span class="text-cloud/60">{link.label}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))
+    }
+  </nav>
+</section>

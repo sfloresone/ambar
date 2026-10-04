@@ -1,0 +1,22 @@
+---
+import { buttonVariants } from "@ambar/ui/components/button";
+import { FirstMomentDialog } from "@ambar/ui/components/first-moment-dialog";
+import { appUrl } from "@/lib/app-url.ts";
+---
+
+<section class="flex flex-col items-start gap-6 pt-16 sm:pt-28">
+  <h1
+    class="max-w-3xl animate-in text-5xl tracking-tight text-balance duration-700 ease-out fade-in slide-in-from-bottom-3 motion-reduce:animate-none sm:text-7xl"
+  >
+    A moment kept.
+    <span class="block text-leaf">Still there when you look.</span>
+  </h1>
+  <p class="max-w-xl text-lg text-pretty text-muted-foreground">
+    A photo, a short clip or a link, not just a screenshot. Keep it in the moment, find it on any
+    device, and share only what you choose.
+  </p>
+  <div class="flex flex-wrap gap-3">
+    <FirstMomentDialog client:idle continueHref={appUrl} />
+    <a href="#try" class={buttonVariants({ tone: "cloud", size: "lg" })}>Try it here</a>
+  </div>
+</section>

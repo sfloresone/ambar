@@ -1,0 +1,55 @@
+---
+import "@ambar/ui/globals.css";
+import { devSections } from "../sections.ts";
+
+type Props = {
+  title: string;
+};
+
+const { title } = Astro.props;
+
+const current = Astro.url.pathname.replace(/\/$/, "");
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>{title} · Ámbar design system</title>
+  </head>
+  <body class="min-h-svh">
+    <div class="mx-auto grid max-w-7xl gap-10 px-6 py-10 lg:grid-cols-[12rem_1fr]">
+      <aside class="flex flex-col gap-6 lg:sticky lg:top-10 lg:self-start">
+        <a href="/dev" class="font-heading text-xl font-bold tracking-tight text-foreground">
+          Ámbar
+          <span class="block font-sans text-xs font-medium tracking-widest text-muted-foreground uppercase">
+            Design system
+          </span>
+        </a>
+        <nav class="flex flex-col gap-1 text-sm">
+          {
+            devSections.map((section) => (
+              <a
+                href={`/dev/${section.slug}`}
+                aria-current={current === `/dev/${section.slug}` ? "page" : undefined}
+                class="rounded-lg px-3 py-2 text-muted-foreground hover:bg-muted hover:text-foreground aria-[current=page]:bg-muted aria-[current=page]:font-medium aria-[current=page]:text-foreground"
+              >
+                {section.title}
+              </a>
+            ))
+          }
+        </nav>
+      </aside>
+      <main class="flex min-w-0 flex-col gap-12">
+        <header class="flex flex-col gap-2">
+          <h1 class="text-4xl tracking-tight">{title}</h1>
+          <slot name="lead" />
+        </header>
+        <slot />
+      </main>
+    </div>
+  </body>
+</html>

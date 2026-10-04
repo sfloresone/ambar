@@ -1,0 +1,28 @@
+---
+import { FeatureCards, type FeatureCard } from "@/components/feature-cards.tsx";
+
+const features: FeatureCard[] = [
+  {
+    icon: "sparkle",
+    title: "Keep it in the moment",
+    text: "A photo, a short clip or a link. Not a screenshot you will never find again.",
+  },
+  {
+    icon: "devices",
+    title: "Find it on any device",
+    text: "What you keep on one device is waiting on all the others.",
+  },
+  {
+    icon: "lock",
+    title: "Share only what you choose",
+    text: "Every moment is yours alone until you decide to share it.",
+  },
+];
+---
+
+<section id="features" aria-labelledby="features-title" class="flex scroll-mt-24 flex-col gap-8">
+  <h2 id="features-title" class="max-w-xl text-3xl tracking-tight text-balance sm:text-4xl">
+    Built for the moments you want to see again
+  </h2>
+  <FeatureCards client:visible features={features} />
+</section>
