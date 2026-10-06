@@ -1,42 +1,43 @@
 ---
-/**
- * A leaf caught in an amber resin drop. Static HTML, no JS.
- * The leaf below is a PLACEHOLDER until the final illustration exists: replace the <svg> content
- * (or import an asset from src/assets/pricing/) and keep the layers around it.
- */
+import { Button } from "@ambar/ui/components/button";
+import { Image } from "astro:assets";
+import leafCloud from "@/assets/pricing/leaf-cloud.webp";
+import leafInk from "@/assets/pricing/leaf-ink.webp";
+import sproutCloud from "@/assets/pricing/sprout-cloud.webp";
+import sproutInk from "@/assets/pricing/sprout-ink.webp";
+import surfaceMapUrl from "@/assets/pricing/surface-map.png?url";
+
 type Props = {
-  /** sprout: small leaf (Free). leaf: full leaf (Plus). */
   size?: "sprout" | "leaf";
+  surface?: "cloud" | "ink";
 };
 
-const { size = "leaf" } = Astro.props;
+const { size = "leaf", surface = "cloud" } = Astro.props;
+
+const posters = { sprout: { cloud: sproutCloud, ink: sproutInk }, leaf: { cloud: leafCloud, ink: leafInk } };
 ---
 
-<div aria-hidden="true" class="relative mx-auto aspect-square w-full max-w-56">
-  <!-- The drop: organic outline, honey resin denser at the edges, 1px hairline like every tactile surface. -->
-  <div
-    class="absolute inset-0 overflow-hidden rounded-[46%_54%_48%_52%/56%_44%_56%_44%] bg-[radial-gradient(circle_at_38%_32%,color-mix(in_oklab,var(--color-resin)_28%,transparent),color-mix(in_oklab,var(--color-resin)_62%,transparent)_72%)] shadow-[0_0_0_1px_color-mix(in_oklab,var(--color-resin)_45%,transparent),0_2px_4px_rgb(20_20_20/0.08),0_12px_28px_color-mix(in_oklab,var(--color-resin)_28%,transparent),inset_0_-10px_24px_color-mix(in_oklab,var(--color-resin)_55%,transparent),inset_0_6px_14px_rgb(255_255_255/0.45)]"
-  >
-    <!-- Placeholder leaf. -->
-    <svg
-      viewBox="0 0 100 140"
-      class:list={[
-        "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-leaf",
-        size === "sprout" ? "w-[34%] rotate-[-18deg]" : "w-[50%] rotate-[14deg]",
-      ]}
-    >
-      <path d="M50 4C84 32 92 82 50 136C8 82 16 32 50 4Z" fill="currentColor"></path>
-      <path
-        d="M50 18V128M50 46L30 34M50 46L70 34M50 72L26 58M50 72L74 58M50 98L32 86M50 98L68 86"
-        fill="none"
-        stroke="rgb(255 255 255 / 0.35)"
-        stroke-width="2"
-        stroke-linecap="round"></path>
-    </svg>
-    <!-- Resin over the leaf, so it reads as embedded, not stuck on top. -->
-    <div class="absolute inset-0 bg-resin/30"></div>
-    <!-- Light caught on the surface. -->
-    <div class="absolute top-[11%] left-[17%] h-[16%] w-[30%] rotate-[-24deg] rounded-full bg-cloud/70 blur-[6px]"></div>
-    <div class="absolute right-[20%] bottom-[16%] size-[6%] rounded-full bg-cloud/60 blur-[2px]"></div>
+<div data-amber-specimen data-amber-size={size} data-amber-surface={surface} data-amber-map={surfaceMapUrl} class="relative mx-auto aspect-square w-full max-w-56">
+  <div data-amber-drop aria-hidden="true" class="absolute inset-0">
+    <Image
+      data-amber-poster
+      src={posters[size][surface]}
+      alt=""
+      width={336}
+      height={336}
+      widths={[224, 336]}
+      sizes="224px"
+      format="webp"
+      quality={80}
+      loading="lazy"
+      class="absolute inset-0 size-full"
+    />
   </div>
+  <Button
+    data-amber-control
+    hidden
+    tone="cloud"
+    aria-label="Press the amber drop"
+    className="absolute top-[8%] right-[14%] bottom-[10%] left-[14%] h-auto w-auto touch-pan-y rounded-[50%_52%_48%_50%/58%_50%_50%_42%] bg-transparent p-0 shadow-none hover:brightness-100 active:translate-y-0 active:shadow-none motion-reduce:hidden [&[hidden]]:hidden"
+  />
 </div>

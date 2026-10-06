@@ -1,3 +1,4 @@
+import { EASE } from "@ambar/ui/lib/motion";
 import { CopyButton } from "@ambar/ui/components/copy-button";
 import { SaveToggle } from "@ambar/ui/components/save-toggle";
 import { SegmentedControl } from "@ambar/ui/components/segmented-control";
@@ -7,7 +8,6 @@ import { LinkSimpleIcon, LockSimpleIcon, PlayIcon, UsersIcon } from "@phosphor-i
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useState, type ReactNode } from "react";
 
-const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
 type Kind = "Photo" | "Clip" | "Link";
 
@@ -105,7 +105,7 @@ function MomentMedia({ kind, photoSrc, clipPosterSrc }: MomentMediaProps) {
           initial={reduceMotion ? false : { opacity: 0, transform: "scale(0.97)" }}
           animate={{ opacity: 1, transform: "scale(1)" }}
           exit={reduceMotion ? undefined : { opacity: 0, transform: "scale(0.97)" }}
-          transition={{ duration: 0.22, ease: EASE_OUT }}
+          transition={{ duration: 0.22, ease: EASE.outSoft }}
         >
           {kind === "Link" ? (
             <div className="flex size-full flex-col justify-end gap-2 bg-muted p-5">

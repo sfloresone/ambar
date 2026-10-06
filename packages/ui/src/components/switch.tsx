@@ -37,7 +37,7 @@ export function Switch({ label, defaultChecked = false, disabled = false, onChec
           className={cn(
             "size-6 rounded-full bg-cloud",
             RAISED_LIGHT,
-            "transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] motion-reduce:transition-none",
+            "transition-transform duration-300 ease-spring motion-reduce:transition-none",
             "data-checked:translate-x-5",
           )}
         />

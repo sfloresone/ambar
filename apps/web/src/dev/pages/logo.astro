@@ -1,0 +1,135 @@
+---
+import Mark from "@/components/mark.astro";
+import Wordmark from "@/components/wordmark.astro";
+import DevLayout from "../components/dev-layout.astro";
+import Specimen from "../components/specimen.astro";
+import Surface from "../components/surface.astro";
+
+const sizes = [
+  { label: "16", class: "size-4" },
+  { label: "24", class: "size-6" },
+  { label: "32", class: "size-8" },
+  { label: "64", class: "size-16" },
+];
+
+const wordmarks = [
+  {
+    variant: "color",
+    title: "Wordmark",
+    description: "Footer lettering. A and r are ink, m and a are leaf, b is sky. The acute is a thin leaf.",
+  },
+  {
+    variant: "ink",
+    title: "Wordmark on ink",
+    description: "A and r become cloud so they stay visible. m, a, and the leaf accent stay leaf. b stays sky.",
+  },
+  {
+    variant: "mono",
+    title: "Wordmark, mono",
+    description: "One color, currentColor, accent included. It follows the surface.",
+  },
+] as const;
+---
+
+<DevLayout title="Logo">
+  <p slot="lead" class="max-w-2xl text-muted-foreground">
+    The amber mark, and the wordmark with the leaf as the acute. Each one on cloud and on ink. The wordmark is shown
+    at footer size and at the header size.
+  </p>
+
+  {
+    wordmarks.map((wordmark) => (
+      <Specimen title={wordmark.title} description={wordmark.description}>
+        {(["cloud", "ink"] as const).map((tone) => (
+          <Surface tone={tone}>
+            <div class="flex w-full flex-col items-start gap-6">
+              {(["footer", "header"] as const).map((size) => (
+                <div class:list={["flex flex-col gap-2", size === "footer" && "w-full"]}>
+                  <Wordmark variant={wordmark.variant} size={size} />
+                  <span class="text-xs text-muted-foreground">{size === "footer" ? "Footer" : "Header"}</span>
+                </div>
+              ))}
+            </div>
+          </Surface>
+        ))}
+      </Specimen>
+    ))
+  }
+
+  <Specimen title="Color" description="Resin gradient, leaf, and a cloud highlight. The mark as chosen.">
+    <Surface tone="cloud"><Mark variant="color" class="size-36" /></Surface>
+    <Surface tone="ink"><Mark variant="color" class="size-36" /></Surface>
+  </Specimen>
+
+  <Specimen title="Flat" description="Solid resin and leaf, same highlight. For sizes where the gradient turns to mud.">
+    <Surface tone="cloud"><Mark variant="flat" class="size-36" /></Surface>
+    <Surface tone="ink"><Mark variant="flat" class="size-36" /></Surface>
+  </Specimen>
+
+  <Specimen
+    title="Mono"
+    description="One color, currentColor. The leaf, veins, and highlight are cut out of the stone."
+  >
+    <Surface tone="cloud"><Mark variant="mono" class="size-36" /></Surface>
+    <Surface tone="ink"><Mark variant="mono" class="size-36" /></Surface>
+  </Specimen>
+
+  <Specimen
+    title="Two-color"
+    description="Ink stone on cloud, cloud stone on ink. The leaf stays leaf. No resin."
+  >
+    <Surface tone="cloud"><Mark variant="duo" class="size-36" /></Surface>
+    <Surface tone="ink"><Mark variant="duo" class="size-36" /></Surface>
+  </Specimen>
+
+  <Specimen title="Leaf" description="The cutout in leaf only.">
+    <Surface tone="cloud"><Mark variant="leaf" class="size-36" /></Surface>
+    <Surface tone="ink"><Mark variant="leaf" class="size-36" /></Surface>
+  </Specimen>
+
+  <Specimen title="Resin" description="The cutout in resin only.">
+    <Surface tone="cloud"><Mark variant="resin" class="size-36" /></Surface>
+    <Surface tone="ink"><Mark variant="resin" class="size-36" /></Surface>
+  </Specimen>
+
+  <section class="flex flex-col gap-4">
+    <div class="flex flex-col gap-1">
+      <h2 class="text-xl tracking-tight">At small sizes</h2>
+      <p class="max-w-2xl text-sm text-muted-foreground">Color, flat, and mono at 16, 24, 32, and 64.</p>
+    </div>
+    <div class="grid gap-4 xl:grid-cols-2">
+      <Surface tone="cloud">
+        <div class="flex flex-col gap-6">
+          {
+            (["color", "flat", "mono"] as const).map((variant) => (
+              <div class="flex items-end gap-6">
+                {sizes.map((size) => (
+                  <div class="flex flex-col items-center gap-2">
+                    <Mark variant={variant} class={size.class} />
+                    <span class="text-xs text-muted-foreground">{size.label}</span>
+                  </div>
+                ))}
+              </div>
+            ))
+          }
+        </div>
+      </Surface>
+      <Surface tone="ink">
+        <div class="flex flex-col gap-6">
+          {
+            (["color", "flat", "mono"] as const).map((variant) => (
+              <div class="flex items-end gap-6">
+                {sizes.map((size) => (
+                  <div class="flex flex-col items-center gap-2">
+                    <Mark variant={variant} class={size.class} />
+                    <span class="text-xs text-muted-foreground">{size.label}</span>
+                  </div>
+                ))}
+              </div>
+            ))
+          }
+        </div>
+      </Surface>
+    </div>
+  </section>
+</DevLayout>

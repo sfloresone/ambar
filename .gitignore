@@ -8,3 +8,6 @@ dist
 .DS_Store
 .agents
 .cursor
+
+# Local concept documentation; keep untracked for now.
+/docs/

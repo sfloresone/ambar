@@ -1,21 +1,23 @@
 ---
 import AmberSpecimen from "@/components/amber-specimen.astro";
 import { PricingPlans } from "@/components/pricing-plans.tsx";
-import { plans } from "@/data/plans.ts";
+import { plans } from "@ambar/core";
 import { appUrl } from "@/lib/app-url.ts";
+import { apiUrl } from "@/lib/api-url.ts";
+import { onboardingBackdrop } from "@/lib/onboarding.ts";
 ---
 
 <section id="pricing" aria-labelledby="pricing-title" class="flex scroll-mt-24 flex-col gap-8">
   <div class="flex flex-col gap-3">
     <h2 id="pricing-title" class="text-3xl tracking-tight sm:text-4xl">Room for your moments</h2>
     <p class="max-w-xl text-pretty text-muted-foreground">
-      Start free. When you need more room, Plus gives you plenty of it.
+      Start with {plans[0]?.name}. When you need more room, {plans[1]?.name} gives you plenty of it.
     </p>
   </div>
 
-  <PricingPlans client:visible plans={plans} appUrl={appUrl}>
-    <AmberSpecimen slot="free" size="sprout" />
-    <AmberSpecimen slot="plus" size="leaf" />
+  <PricingPlans client:visible plans={plans} appUrl={appUrl} onboardingBackdrop={onboardingBackdrop} apiUrl={apiUrl}>
+    <AmberSpecimen slot="seed" size="sprout" />
+    <AmberSpecimen slot="leaf" size="leaf" />
   </PricingPlans>
 
   <dl class="grid gap-6 border-t pt-8 text-sm sm:grid-cols-2">

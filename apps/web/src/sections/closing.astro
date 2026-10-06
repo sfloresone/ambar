@@ -1,5 +1,7 @@
 ---
 import { FirstMomentDialog } from "@ambar/ui/components/first-moment-dialog";
+import { apiUrl } from "@/lib/api-url.ts";
+import { onboardingBackdrop } from "@/lib/onboarding.ts";
 import { contactEmail } from "@/data/team.ts";
 import { appUrl } from "@/lib/app-url.ts";
 
@@ -46,7 +48,7 @@ const groups: FooterGroup[] = [
         <h2 id="closing-title" class="max-w-xl text-3xl tracking-tight text-balance sm:text-4xl">
           Keep your first moment today.
         </h2>
-        <FirstMomentDialog client:idle continueHref={appUrl} tone="cloud" />
+        <FirstMomentDialog client:idle continueHref={appUrl} backdropSrc={onboardingBackdrop} apiUrl={apiUrl} tone="cloud" />
       </div>
     )
   }

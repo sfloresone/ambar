@@ -1,0 +1,88 @@
+---
+import { highlight, leaf, leafTransform, markColors, markGradient, spark, stone, veinOpacity, veins } from "@ambar/ui/lib/mark-paths";
+
+type Variant = "color" | "flat" | "mono" | "duo" | "leaf" | "resin";
+
+type Props = {
+  variant?: Variant;
+  class?: string;
+};
+
+const { variant = "color", class: className } = Astro.props;
+
+const uid = Math.random().toString(36).slice(2, 8);
+
+const cutout = variant === "mono" || variant === "leaf" || variant === "resin";
+
+const cutoutFill = variant === "leaf" ? markColors.leaf : variant === "resin" ? markColors.resin : "currentColor";
+---
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" class={className} aria-hidden="true">
+  {
+    variant === "color" && (
+      <>
+        <defs>
+          <radialGradient id={`g-${uid}`} cx={markGradient.cx} cy={markGradient.cy} r={markGradient.r}>
+            {markGradient.stops.map((stop) => <stop offset={stop.offset} stop-color={stop.color} />)}
+          </radialGradient>
+        </defs>
+        <path d={stone} fill={`url(#g-${uid})`} stroke={markColors.edge} stroke-width="1" />
+        <g transform={leafTransform}>
+          <path d={leaf} fill={markColors.leaf} />
+          <path d={veins} fill="none" stroke="#ffffff" stroke-opacity={veinOpacity} stroke-width="1.4" stroke-linecap="round" />
+        </g>
+        <ellipse {...highlight} opacity={undefined} fill="#ffffff" fill-opacity={highlight.opacity} />
+        <circle {...spark} opacity={undefined} fill="#ffffff" fill-opacity={spark.opacity} />
+      </>
+    )
+  }
+  {
+    variant === "flat" && (
+      <>
+        <path d={stone} fill={markColors.resin} stroke={markColors.edge} stroke-width="1" />
+        <g transform={leafTransform}>
+          <path d={leaf} fill={markColors.leaf} />
+          <path d={veins} fill="none" stroke="#ffffff" stroke-opacity={veinOpacity} stroke-width="1.4" stroke-linecap="round" />
+        </g>
+        <ellipse {...highlight} opacity={undefined} fill="#ffffff" fill-opacity={highlight.opacity} />
+        <circle {...spark} opacity={undefined} fill="#ffffff" fill-opacity={spark.opacity} />
+      </>
+    )
+  }
+  {
+    variant === "duo" && (
+      <>
+        <defs>
+          <mask id={`gloss-${uid}`} maskUnits="userSpaceOnUse">
+            <rect width="200" height="200" fill="#fff" />
+            <ellipse {...highlight} fill="#000" />
+            <circle {...spark} fill="#000" />
+          </mask>
+        </defs>
+        <path d={stone} fill="currentColor" mask={`url(#gloss-${uid})`} />
+        <g transform={leafTransform}>
+          <path d={leaf} fill={markColors.leaf} />
+          <path d={veins} fill="none" stroke="#ffffff" stroke-opacity="0.4" stroke-width="1.4" stroke-linecap="round" />
+        </g>
+      </>
+    )
+  }
+  {
+    cutout && (
+      <>
+        <defs>
+          <mask id={`cut-${uid}`} maskUnits="userSpaceOnUse">
+            <path d={stone} fill="#fff" />
+            <g transform={leafTransform}>
+              <path d={leaf} fill="#000" />
+              <path d={veins} fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" />
+            </g>
+            <ellipse {...highlight} fill="#000" />
+            <circle {...spark} fill="#000" />
+          </mask>
+        </defs>
+        <path d={stone} fill={cutoutFill} mask={`url(#cut-${uid})`} />
+      </>
+    )
+  }
+</svg>

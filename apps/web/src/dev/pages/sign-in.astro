@@ -1,0 +1,34 @@
+---
+import { FirstMomentDialog } from "@ambar/ui/components/first-moment-dialog";
+import { apiUrl } from "@/lib/api-url.ts";
+import { onboardingBackdrop } from "@/lib/onboarding.ts";
+import DevLayout from "../components/dev-layout.astro";
+import Specimen from "../components/specimen.astro";
+
+const steps = [
+  { at: "Drop", what: "The dialog widens; the moment card pins left and says “Ready to keep”. Email field is focused." },
+  { at: "Email", what: "Last email prefilled. “Send code”. Unknown email = sign up, known = sign in." },
+  { at: "Code", what: "Six cells, one input. Paste or autofill works; the 6th digit submits. Mock code: 123456." },
+  { at: "Link", what: "The email link reopens this page with ?verify=… and restores the moment from the browser." },
+  { at: "Keeping", what: "Upload after verifying; progress on the card; “Try again” if it fails." },
+  { at: "Kept", what: "Card says “Kept”, then the app opens after ~1 s (or “Open Ámbar”)." },
+];
+---
+
+<DevLayout title="Sign-in flow">
+  <p slot="lead" class="max-w-2xl text-muted-foreground">
+    The keep flow with mock clients: no emails are sent and the code is always 123456. The app's
+    /login renders the same flow without a dropped moment.
+  </p>
+
+  <Specimen title="From “Start keeping”" description="Exactly what the landing does. This dialog also handles the email link.">
+    <div class="flex flex-col items-start gap-5 rounded-2xl border p-6">
+      <FirstMomentDialog client:load continueHref="#" backdropSrc={onboardingBackdrop} apiUrl={apiUrl} handlesVerifyLink size="md" label="Start keeping" />
+    </div>
+    <ol class="flex flex-col gap-2.5 rounded-2xl border p-6 text-sm">
+      {steps.map((step) => (
+        <li class="grid grid-cols-[5rem_1fr] gap-3"><span class="font-medium">{step.at}</span><span class="text-muted-foreground">{step.what}</span></li>
+      ))}
+    </ol>
+  </Specimen>
+</DevLayout>

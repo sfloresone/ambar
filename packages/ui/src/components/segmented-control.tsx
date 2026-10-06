@@ -44,7 +44,7 @@ export function SegmentedControl({ options, label, defaultValue, onValueChange }
           value={option}
           className={cn(
             "h-8 cursor-pointer rounded-lg px-3.5 text-muted-foreground outline-hidden select-none",
-            "transition-[color,background-color,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            "transition-[color,background-color,box-shadow] duration-300 ease-settle motion-reduce:transition-none",
             "hover:text-foreground focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-1 focus-visible:outline-ring",
             "data-pressed:bg-cloud data-pressed:text-ink",
             SELECTED_RAISED,

@@ -35,7 +35,7 @@ export function TeamMemberCard({ name, role, imageSrc, imageAlt, socialLinks, cl
           alt={imageAlt ?? `Portrait of ${name}`}
           loading="lazy"
           decoding="async"
-          className="absolute inset-0 size-full object-cover transition-transform duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transform-none motion-reduce:transition-none [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105"
+          className="absolute inset-0 size-full object-cover transition-transform duration-200 ease-out-soft motion-reduce:transform-none motion-reduce:transition-none [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105"
         />
       ) : (
         <div role="img" aria-label={`Portrait placeholder for ${name}`} className="absolute inset-0 grid place-items-center">

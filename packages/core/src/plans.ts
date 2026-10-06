@@ -1,13 +1,11 @@
-/** Pricing source of truth for the landing. Rename plans or change limits here only. */
+/** Plans: one source for the landing pricing and the app settings. Rename plans or change limits here only. */
 
-export type PlanId = "free" | "plus";
+export type PlanId = "seed" | "leaf";
 
 export type Plan = {
   id: PlanId;
-  /** Catalog number shown on the museum placard. */
-  number: string;
   name: string;
-  /** Price in euros. Free has no yearly price. */
+  /** Price in euros. The free plan has no yearly price. */
   monthly: number;
   yearly?: number;
   storage: string;
@@ -17,18 +15,16 @@ export type Plan = {
 
 export const plans: Plan[] = [
   {
-    id: "free",
-    number: "No. 01",
-    name: "Free",
+    id: "seed",
+    name: "Seed",
     monthly: 0,
     storage: "2 GB of storage",
     readings: "75 readings a month",
     moments: "Up to 2,000 moments",
   },
   {
-    id: "plus",
-    number: "No. 02",
-    name: "Plus",
+    id: "leaf",
+    name: "Leaf",
     monthly: 5,
     yearly: 48,
     storage: "25 GB of storage",

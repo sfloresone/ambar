@@ -1,3 +1,4 @@
+import { EASE } from "@ambar/ui/lib/motion";
 import {
   DesktopIcon,
   DeviceMobileIcon,
@@ -8,7 +9,6 @@ import {
 } from "@phosphor-icons/react";
 import { motion, useReducedMotion } from "motion/react";
 
-const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
 const ICONS = {
   globe: GlobeIcon,
@@ -45,7 +45,7 @@ export function PlatformCards({ platforms }: PlatformCardsProps) {
             initial={reduceMotion ? false : { opacity: 0, transform: "translateY(12px)" }}
             whileInView={{ opacity: 1, transform: "translateY(0px)" }}
             viewport={{ once: true, margin: "-40px" }}
-            transition={{ duration: 0.3, ease: EASE_OUT, delay: reduceMotion ? 0 : index * 0.05 }}
+            transition={{ duration: 0.3, ease: EASE.outSoft, delay: reduceMotion ? 0 : index * 0.05 }}
           >
             {video ? (
               <video src={video} muted loop playsInline preload="none" className="aspect-video w-full bg-muted object-cover" />

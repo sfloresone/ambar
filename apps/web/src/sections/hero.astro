@@ -1,6 +1,8 @@
 ---
 import { buttonVariants } from "@ambar/ui/components/button";
 import { FirstMomentDialog } from "@ambar/ui/components/first-moment-dialog";
+import { apiUrl } from "@/lib/api-url.ts";
+import { onboardingBackdrop } from "@/lib/onboarding.ts";
 import { appUrl } from "@/lib/app-url.ts";
 ---
 
@@ -16,7 +18,7 @@ import { appUrl } from "@/lib/app-url.ts";
     device, and share only what you choose.
   </p>
   <div class="flex flex-wrap gap-3">
-    <FirstMomentDialog client:idle continueHref={appUrl} />
+    <FirstMomentDialog client:idle continueHref={appUrl} backdropSrc={onboardingBackdrop} apiUrl={apiUrl} handlesVerifyLink />
     <a href="#try" class={buttonVariants({ tone: "cloud", size: "lg" })}>Try it here</a>
   </div>
 </section>

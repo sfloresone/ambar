@@ -1,5 +1,7 @@
 ---
-import { buttonVariants } from "@ambar/ui/components/button";
+import { FirstMomentDialog } from "@ambar/ui/components/first-moment-dialog";
+import { PILL_BRAND, PILL_HEADER, PILL_HEADER_WRAP, PILL_LINK } from "@ambar/ui/lib/layout";
+import { apiUrl } from "@/lib/api-url.ts";
 import { appUrl } from "@/lib/app-url.ts";
 
 const home = Astro.url.pathname === "/" ? "" : "/";
@@ -11,14 +13,9 @@ const links = [
 ];
 ---
 
-<!--
-  Floating glass pill. backdrop-saturate lets photos underneath tint the glass (leaves, sky) like
-  looking through resin. Without backdrop-filter support the fill stays nearly opaque for contrast.
--->
-<header class="sticky top-3 z-40 px-3">
-  <div
-    class="relative mx-auto flex h-14 w-fit items-center gap-6 rounded-full border border-ink/5 bg-cloud/90 pr-2.5 pl-6 shadow-[0_0_0_1px_rgb(20_20_20/0.03),0_1px_2px_rgb(20_20_20/0.05),0_8px_24px_rgb(20_20_20/0.06),inset_0_1px_0_rgb(255_255_255/0.7)] supports-[backdrop-filter]:bg-cloud/65 supports-[backdrop-filter]:backdrop-blur-xl supports-[backdrop-filter]:backdrop-saturate-150"
-  >
+<!-- Floating glass pill, shared with the app (see @ambar/ui/lib/layout). -->
+<header class={PILL_HEADER_WRAP}>
+  <div class={PILL_HEADER}>
     <!--
       Reading progress: the pill's own edge is traced in leaf as the page scrolls.
       The pill is h-14 (56px) so the capsule radius is exact: rx = ry = 28. A large rx would be
@@ -37,24 +34,19 @@ const links = [
         stroke-dashoffset="1"
         class="trace-on-scroll stroke-leaf"></rect>
     </svg>
-    <a
-      href="/"
-      class="mr-6 rounded-full font-heading text-xl font-bold tracking-tight text-foreground outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ring"
-    >
+    <a href="/" class={PILL_BRAND}>
       Ámbar
     </a>
     <nav aria-label="Main" class="hidden gap-1 text-sm sm:flex">
       {
         links.map((link) => (
-          <a
-            href={link.href}
-            class="rounded-full px-3.5 py-1.5 text-muted-foreground outline-hidden transition-[color,background-color] duration-200 hover:bg-ink/5 hover:text-foreground focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring motion-reduce:transition-none"
-          >
+          <a href={link.href} class={PILL_LINK}>
             {link.label}
           </a>
         ))
       }
     </nav>
-    <a href={`${appUrl}/login`} class={buttonVariants({ tone: "cloud", size: "sm", className: "rounded-full" })}>Sign in</a>
+    <!-- Sign in happens here, in the same flow as onboarding; the iris then hands off to the app. -->
+    <FirstMomentDialog client:idle mode="sign-in" continueHref={appUrl} apiUrl={apiUrl} tone="cloud" size="sm" className="rounded-full" />
   </div>
 </header>

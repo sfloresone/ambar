@@ -1,0 +1,65 @@
+---
+import { FirstMomentDialog } from "@ambar/ui/components/first-moment-dialog";
+import AmberSpecimen from "@/components/amber-specimen.astro";
+import { onboardingBackdrop } from "@/lib/onboarding.ts";
+import DevLayout from "../components/dev-layout.astro";
+import { ShutterDemo } from "../components/shutter-demo.tsx";
+import Specimen from "../components/specimen.astro";
+
+const develop = [
+  { at: "Hover", what: "Content and backdrop start downloading, so the click opens instantly." },
+  { at: "0–2.4 s", what: "Once loaded, a faint sky photo develops behind the title, white to full contrast." },
+  { at: "250 ms", what: "Each word develops from overexposed and soft to sharp, 140 ms apart." },
+  { at: "~1.7 s", what: "Description, then the drop zone." },
+  { at: "On keep", what: "A display-sized copy of the photo develops like a print (2.2 s). Unreadable formats show a card." },
+];
+
+const shutter = [
+  { at: "Close", what: "Six slats (ink · leaf · sky) drop top to bottom, 40 ms apart, 650 ms each." },
+  { at: "Open", what: "Same in reverse; 850 ms until the last slat clears." },
+  { at: "Usage", what: "<Shutter closed={…} /> in any relative container, or no prop inside a Base UI group (dialog)." },
+];
+---
+
+<DevLayout title="Motion">
+  <p slot="lead" class="max-w-2xl text-muted-foreground">
+    Develop is the onboarding of “Start keeping”. Shutter is a reusable component for other sections.
+    Amber uses the original mark’s silhouette, leaf and veins. Press and drag to move the dent through the resin. With “reduce motion” on, it stays still and the other effects show content at once.
+  </p>
+
+  <Specimen title="Develop · onboarding" description="FirstMomentDialog. The landing CTAs use exactly this.">
+    <div class="flex flex-col items-start gap-5 rounded-2xl border p-6">
+      <FirstMomentDialog client:load continueHref="#" backdropSrc={onboardingBackdrop} size="md" label="Open onboarding" />
+    </div>
+    <ol class="flex flex-col gap-2.5 rounded-2xl border p-6 text-sm">
+      {develop.map((step) => (
+        <li class="grid grid-cols-[5rem_1fr] gap-3"><span class="font-medium tabular-nums">{step.at}</span><span class="text-muted-foreground">{step.what}</span></li>
+      ))}
+    </ol>
+  </Specimen>
+
+  <Specimen title="Shutter" description="@ambar/ui/components/shutter. Pure CSS, no Motion.">
+    <div class="rounded-2xl border p-6"><ShutterDemo client:load /></div>
+    <ol class="flex flex-col gap-2.5 rounded-2xl border p-6 text-sm">
+      {shutter.map((step) => (
+        <li class="grid grid-cols-[5rem_1fr] gap-3"><span class="font-medium">{step.at}</span><span class="text-muted-foreground">{step.what}</span></li>
+      ))}
+    </ol>
+  </Specimen>
+  <Specimen title="Amber · local pressure" description="Press and drag with a pointer; Space and Enter press in the center. Local pressure builds over 120 ms; release settles over 600 ms from the last position. Vertical touch scrolling is preserved. A static poster is used when motion or WebGL is unavailable.">
+    <div data-amber-preview class="flex flex-col gap-6 rounded-2xl border bg-cloud p-8 text-ink">
+      <p class="text-sm font-medium">Cloud · small leaf</p>
+      <AmberSpecimen size="sprout" />
+    </div>
+    <div data-amber-preview class="dark flex flex-col gap-6 rounded-2xl bg-ink p-8 text-cloud">
+      <p class="text-sm font-medium">Ink · full leaf</p>
+      <AmberSpecimen size="leaf" surface="ink" />
+    </div>
+  </Specimen>
+</DevLayout>
+
+<script>
+  import { attachAmberInteraction } from "@/lib/amber-interaction.ts";
+
+  document.querySelectorAll<HTMLElement>("[data-amber-preview]").forEach(attachAmberInteraction);
+</script>

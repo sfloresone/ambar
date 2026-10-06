@@ -1,32 +1,11 @@
 ---
+import { PLATFORMS } from "@ambar/core";
 import { PlatformCards, type PlatformCard } from "@/components/platform-cards.tsx";
 
-const platforms: PlatformCard[] = [
-  {
-    icon: "globe",
-    name: "Web",
-    status: "At launch",
-    text: "Keep and revisit your moments from any browser. Everything you keep elsewhere is waiting here, in one place.",
-  },
-  {
-    icon: "puzzle",
-    name: "Browser extension",
-    status: "At launch",
-    text: "Keep a page, an image or a link in one click while you browse, without leaving what you are doing.",
-  },
-  {
-    icon: "mobile",
-    name: "Mobile",
-    status: "Later",
-    text: "Keep a moment straight from the camera or the share menu, the second it happens. Android first.",
-  },
-  {
-    icon: "desktop",
-    name: "Desktop",
-    status: "Later",
-    text: "A dedicated app, one shortcut away, for the moments that happen on your screen.",
-  },
-];
+// Platform data is shared with the app's "Get Ámbar" menu (@ambar/core). Icons and videos are landing-only.
+const ICONS = { web: "globe", extension: "puzzle", mobile: "mobile", desktop: "desktop" } as const;
+
+const platforms: PlatformCard[] = PLATFORMS.map(({ id, name, status, text }) => ({ icon: ICONS[id], name, status, text }));
 ---
 
 <section id="platforms" aria-labelledby="platforms-title" class="flex scroll-mt-24 flex-col gap-8">

@@ -41,7 +41,7 @@ export function SaveToggle({ defaultSaved = false, label = "Keep", savedLabel = 
       <BookmarkSimpleIcon
         weight={saved ? "fill" : "bold"}
         aria-hidden
-        className="transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] motion-reduce:transition-none in-data-pressed:scale-110"
+        className="transition-transform duration-300 ease-spring motion-reduce:transition-none in-data-pressed:scale-110"
       />
       <span className="grid">
         <span aria-hidden className={cn(LAYER, saved && "opacity-0")}>

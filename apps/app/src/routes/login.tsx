@@ -1,40 +1,32 @@
-import type { FormEvent } from "react";
-import { Button } from "@ambar/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@ambar/ui/components/card";
-import { Input } from "@ambar/ui/components/input";
-import { Label } from "@ambar/ui/components/label";
+import { FlowLogo } from "@ambar/ui/components/flow-logo";
+import { IRIS_ENTRY, useIrisExit } from "@ambar/ui/components/iris";
+import { KeepFlow } from "@ambar/ui/screens/keep-flow/keep-flow";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router";
 
-function handleSubmit(event: FormEvent<HTMLFormElement>) {
-  // No backend yet: the AuthClient from @ambar/core will be wired to apps/api.
-  event.preventDefault();
-}
-
+// Same flow and same ending as the landing: logo on top, email → code (or the email link), then the
+// iris closes onto the logo and opens on the moments (AppLayout opens it on the iris entry flag).
 export function LoginRoute() {
+  const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  // Read the email-link token once, then remove it from the URL so it doesn't linger in history.
+  const [verifyToken] = useState(() => params.get("verify") ?? undefined);
+
+  const { logoRef, close, iris } = useIrisExit(() =>
+    navigate({ pathname: "/", search: `?${IRIS_ENTRY.param}=${IRIS_ENTRY.value}` }, { replace: true }),
+  );
+
+  useEffect(() => {
+    if (params.has("verify")) {
+      setParams({}, { replace: true });
+    }
+  }, [params, setParams]);
+
   return (
-    <section className="m-auto w-full max-w-sm px-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <h1 className="text-xl tracking-tight">Sign in to Ámbar</h1>
-          </CardTitle>
-          <CardDescription>We will send a link to your email.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" autoComplete="email" required />
-            </div>
-            <Button type="submit">Continue</Button>
-          </form>
-        </CardContent>
-      </Card>
+    <section className="mx-auto w-full max-w-4xl">
+      {iris}
+      <FlowLogo ref={logoRef} />
+      <KeepFlow apiUrl={import.meta.env.VITE_API_URL} verifyToken={verifyToken} onDone={close} />
     </section>
   );
 }

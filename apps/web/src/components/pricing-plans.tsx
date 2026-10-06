@@ -2,9 +2,10 @@ import { buttonVariants } from "@ambar/ui/components/button";
 import { FirstMomentDialog } from "@ambar/ui/components/first-moment-dialog";
 import { SegmentedControl } from "@ambar/ui/components/segmented-control";
 import { CheckIcon } from "@phosphor-icons/react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
-import type { Plan } from "@/data/plans.ts";
+import type { Plan } from "@ambar/core";
+import { attachAmberInteraction } from "@/lib/amber-interaction.ts";
 
 type Billing = "monthly" | "yearly";
 
@@ -13,19 +14,27 @@ const euros = new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR
 type PricingPlansProps = {
   plans: Plan[];
   appUrl: string;
-  /** Static specimen HTML passed from Astro slots, so the resin drops ship no JS. */
-  free?: ReactNode;
-  plus?: ReactNode;
+  /** Photo that develops behind the onboarding title. */
+  onboardingBackdrop?: string;
+  apiUrl?: string;
+  /** Server-rendered specimens, enhanced once this island becomes visible. */
+  seed?: ReactNode;
+  leaf?: ReactNode;
 };
 
-export function PricingPlans({ plans, appUrl, free, plus }: PricingPlansProps) {
+export function PricingPlans({ plans, appUrl, onboardingBackdrop, apiUrl, seed, leaf }: PricingPlansProps) {
+  const root = useRef<HTMLDivElement>(null);
   const [billing, setBilling] = useState<Billing>("monthly");
   const paid = plans.find((plan) => plan.yearly !== undefined);
   const saving = paid?.yearly === undefined ? 0 : Math.round((1 - paid.yearly / (paid.monthly * 12)) * 100);
   const yearlyLabel = `Yearly · save ${saving}%`;
 
+  useEffect(() => {
+    if (root.current) return attachAmberInteraction(root.current);
+  }, []);
+
   return (
-    <div className="flex flex-col items-start gap-8">
+    <div ref={root} className="flex flex-col items-start gap-8">
       <SegmentedControl
         label="Billing period"
         options={["Monthly", yearlyLabel]}
@@ -38,16 +47,11 @@ export function PricingPlans({ plans, appUrl, free, plus }: PricingPlansProps) {
             key={plan.id}
             className="flex flex-col overflow-hidden rounded-3xl border bg-card shadow-[0_1px_2px_rgb(20_20_20/0.05),0_8px_24px_rgb(20_20_20/0.06)]"
           >
-            <div className="px-6 pt-10 pb-8">{plan.id === "free" ? free : plus}</div>
+            <div className="px-6 pt-10 pb-8">{plan.id === "seed" ? seed : leaf}</div>
             <div className="flex flex-1 flex-col gap-5 border-t p-6">
-              <div className="flex flex-col gap-1">
-                <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
-                  {plan.number} · Specimen
-                </p>
-                <h3 className="text-2xl">{plan.name}</h3>
-              </div>
+              <h3 className="text-2xl">{plan.name}</h3>
               <Price plan={plan} billing={billing} />
-              <ul className="flex flex-col gap-2.5 border-t pt-5 text-sm">
+              <ul className="flex flex-col gap-2.5 text-sm">
                 {[plan.storage, plan.readings, plan.moments].map((line) => (
                   <li key={line} className="flex items-center gap-2.5">
                     <CheckIcon weight="bold" aria-hidden className="size-4 shrink-0 text-leaf" />
@@ -56,8 +60,8 @@ export function PricingPlans({ plans, appUrl, free, plus }: PricingPlansProps) {
                 ))}
               </ul>
               <div className="mt-auto pt-2">
-                {plan.id === "free" ? (
-                  <FirstMomentDialog continueHref={appUrl} tone="cloud" size="md" />
+                {plan.id === "seed" ? (
+                  <FirstMomentDialog continueHref={appUrl} backdropSrc={onboardingBackdrop} apiUrl={apiUrl} tone="cloud" size="md" />
                 ) : (
                   <a href={`${appUrl}/login`} className={buttonVariants({ tone: "leaf" })}>
                     Get {plan.name}

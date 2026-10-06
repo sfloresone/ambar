@@ -1,0 +1,67 @@
+---
+import { leaf } from "@ambar/ui/lib/mark-paths";
+
+type Props = {
+  variant?: "color" | "ink" | "mono";
+  size?: "footer" | "header";
+  class?: string;
+};
+
+const { variant = "color", size = "footer", class: className } = Astro.props;
+
+const mono = variant === "mono";
+
+const end = mono ? "text-current" : variant === "ink" ? "text-cloud" : "text-ink";
+
+const middle = mono ? "text-current" : "text-leaf";
+
+const sky = mono ? "text-current" : "text-sky";
+
+const accentFill = mono ? "currentColor" : "#537234";
+
+const midrib = mono ? "currentColor" : "#ffffff";
+
+const letters = [
+  { char: "A", className: end, accent: true },
+  { char: "m", className: middle },
+  { char: "b", className: sky },
+  { char: "a", className: middle },
+  { char: "r", className: end },
+];
+---
+
+<span class:list={["inline-flex max-w-full", size === "footer" && "@container w-full", className]}>
+  <span class="sr-only">Ámbar</span>
+  <span
+    aria-hidden="true"
+    class:list={[
+      "flex items-end pt-[0.42em] font-heading leading-none font-bold tracking-tight whitespace-nowrap",
+      size === "header" ? "text-xl" : "text-[clamp(3rem,28cqw,14rem)]",
+    ]}
+  >
+    {
+      letters.map((letter) => (
+        <span class:list={["relative", letter.className]}>
+          {letter.char}
+          {letter.accent && (
+            <svg
+              viewBox="0 0 56 96"
+              aria-hidden="true"
+              class="pointer-events-none absolute bottom-[0.9em] left-[0.19em] h-[0.24em] w-auto origin-bottom rotate-[22deg] scale-x-[0.45]"
+            >
+              <path d={leaf} fill={accentFill} />
+              <path
+                d="M28 12V86"
+                fill="none"
+                stroke={midrib}
+                stroke-opacity="0.45"
+                stroke-width="2.4"
+                stroke-linecap="round"
+              />
+            </svg>
+          )}
+        </span>
+      ))
+    }
+  </span>
+</span>

@@ -26,7 +26,7 @@ export const WELL =
 /** Behavior every tactile control shares: focus, motion, disabled. */
 export const TACTILE_BASE = cn(
   "inline-flex shrink-0 cursor-pointer items-center justify-center font-medium outline-hidden select-none",
-  "transition-[filter,box-shadow,transform,background-color,color] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none",
+  "transition-[filter,box-shadow,transform,background-color,color] duration-200 ease-tactile motion-reduce:transition-none",
   "focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-ring",
   "disabled:pointer-events-none disabled:opacity-40 data-disabled:pointer-events-none data-disabled:opacity-40",
 );
