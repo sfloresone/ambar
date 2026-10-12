@@ -1,6 +1,6 @@
 # Ambar
 
-> A moment kept. Still there when you look.
+> Your mind, kept in sync.
 
 Monorepo managed **exclusively with Bun** (no npm, pnpm or yarn). Project rules live in [AGENTS.md](AGENTS.md).
 
