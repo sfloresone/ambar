@@ -1,22 +1,26 @@
 ---
-import SiteFooter from "@/components/site-footer.astro";
-import SiteHeader from "@/components/site-header.astro";
+import DevelopMoment from "@/components/develop-moment.astro";
+import Wordmark from "@/components/wordmark.astro";
 import Base from "@/layouts/base.astro";
-import Features from "@/sections/features.astro";
-import Hero from "@/sections/hero.astro";
-import Platforms from "@/sections/platforms.astro";
-import Pricing from "@/sections/pricing.astro";
-import TryIt from "@/sections/try-it.astro";
+
+// Until launch the domain shows only this: a moment that develops, and a hint of what's coming.
+const reveal = "animate-in fill-mode-both fade-in slide-in-from-bottom-2 duration-1000 ease-out-soft motion-reduce:animate-none";
 ---
 
-<Base>
-  <SiteHeader />
-  <main class="mx-auto flex max-w-5xl flex-col gap-28 px-6 pb-28">
-    <Hero />
-    <Features />
-    <TryIt />
-    <Platforms />
-    <Pricing />
-  </main>
-  <SiteFooter />
+<Base description="Some moments are worth keeping. Ambar is almost ready.">
+  <div class="mx-auto flex min-h-svh max-w-5xl flex-col items-center px-6">
+    <header class="pt-10">
+      <Wordmark size="header" />
+    </header>
+    <main class="flex flex-1 flex-col items-center justify-center gap-12 py-16 text-center">
+      <DevelopMoment />
+      <div class="flex flex-col items-center gap-3">
+        <h1 class:list={["max-w-xl text-4xl tracking-tight text-balance sm:text-5xl", reveal, "delay-[1400ms]"]}>
+          Some moments are worth keeping.
+        </h1>
+        <p class:list={["text-lg text-muted-foreground", reveal, "delay-[2200ms]"]}>Your mind, kept in sync.</p>
+      </div>
+    </main>
+    <footer class="pb-8 text-sm text-muted-foreground">© {new Date().getFullYear()} Ambar</footer>
+  </div>
 </Base>

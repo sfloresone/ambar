@@ -16,6 +16,14 @@ Monorepo managed **exclusively with Bun** (no npm, pnpm or yarn). Project rules 
 
 Upcoming apps: `apps/api`, `apps/extension`, `apps/desktop`, `apps/mobile`. Packages are flat: no nested packages.
 
+## Waitlist teaser (branch `pages/waiting-list`)
+
+Until launch, `ambar.page` serves a single static page: a photo that develops and "Ambar is almost ready." No form, no scripts beyond one line, no tracking. The full landing is kept as `src/pages/_landing.astro` and `_team.astro` (Astro skips `_` files); restoring it is a rename.
+
+- Build: `bun install && bun run --filter @ambar/web build`. Output: `apps/web/dist` (static). No environment variables are needed.
+- Static host (Cloudflare Pages, Netlify, Vercel): root `apps/web`, the build command above, publish `dist`.
+- DNS: point the apex `ambar.page` and `www` at the host (ALIAS/CNAME as the provider says), turn on HTTPS and redirect `www` to the apex.
+
 ## Commands
 
 ```sh

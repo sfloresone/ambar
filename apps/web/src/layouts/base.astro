@@ -1,5 +1,7 @@
 ---
 import "@ambar/ui/globals.css";
+import { getImage } from "astro:assets";
+import sky from "@/assets/moments/sky-through-leaves-1.jpeg";
 
 type Props = {
   title?: string;
@@ -10,6 +12,13 @@ const {
   title = "Ambar",
   description = "A moment kept. Still there when you look.",
 } = Astro.props;
+
+// What a shared link shows: the landing's photo, in a size every network accepts.
+const card = await getImage({ src: sky, width: 1200, height: 630, fit: "cover", format: "jpeg", quality: 80 });
+
+const cardUrl = new URL(card.src, Astro.site);
+
+const pageUrl = new URL(Astro.url.pathname, Astro.site);
 ---
 
 <!doctype html>
@@ -18,7 +27,17 @@ const {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
+    <link rel="canonical" href={pageUrl} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Ambar" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={pageUrl} />
+    <meta property="og:image" content={cardUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
     <title>{title}</title>
   </head>
   <body class="min-h-svh">

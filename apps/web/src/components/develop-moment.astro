@@ -1,0 +1,33 @@
+---
+import { getImage } from "astro:assets";
+import sky from "@/assets/moments/sky-through-leaves-1.jpeg";
+
+// Shown at most 18 rem wide: 640 px covers a 2x screen.
+const photo = await getImage({ src: sky, width: 640, format: "webp", quality: 72 });
+---
+
+<!--
+  A print that develops like in the darkroom: from overexposed, flat and soft to sharp. It starts only once
+  the photo has decoded (never "develops" an empty box); without scripts it is simply shown.
+-->
+<figure
+  class="w-[min(18rem,68vw)] -rotate-2 rounded-2xl bg-cloud p-2.5 pb-10 shadow-[0_1px_2px_rgb(20_20_20/0.06),0_18px_48px_rgb(20_20_20/0.12)] transition-[rotate,translate] duration-700 ease-settle motion-reduce:transition-none pointer-fine:hover:rotate-0 pointer-fine:hover:-translate-y-1"
+>
+  <img
+    data-develop
+    src={photo.src}
+    alt="Sunlight through green leaves, seen from below."
+    width="640"
+    height="853"
+    fetchpriority="high"
+    decoding="async"
+    class="aspect-3/4 w-full rounded-lg bg-muted object-cover opacity-0 blur-sm brightness-[2.2] contrast-25 saturate-0 transition-[opacity,filter] duration-[2400ms] ease-settle motion-reduce:transition-none data-developed:opacity-100 data-developed:filter-none noscript:opacity-100 noscript:filter-none"
+  />
+</figure>
+
+<script>
+  const photo = document.querySelector<HTMLImageElement>("img[data-develop]");
+
+  // decode() rejects for a broken image: show whatever there is rather than a blank print.
+  void photo?.decode().finally(() => photo.setAttribute("data-developed", ""));
+</script>
