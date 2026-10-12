@@ -1,7 +1,14 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["ES2023"]
+    "lib": [
+      "ES2025"
+    ],
+    "types": [
+      "bun"
+    ]
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ]
 }

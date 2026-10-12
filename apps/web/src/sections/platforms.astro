@@ -2,7 +2,7 @@
 import { PLATFORMS } from "@ambar/core";
 import { PlatformCards, type PlatformCard } from "@/components/platform-cards.tsx";
 
-// Platform data is shared with the app's "Get Ámbar" menu (@ambar/core). Icons and videos are landing-only.
+// Platform data is shared with the app's "Get Ambar" menu (@ambar/core). Icons and videos are landing-only.
 const ICONS = { web: "globe", extension: "puzzle", mobile: "mobile", desktop: "desktop" } as const;
 
 const platforms: PlatformCard[] = PLATFORMS.map(({ id, name, status, text }) => ({ icon: ICONS[id], name, status, text }));

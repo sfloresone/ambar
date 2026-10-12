@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  /** API base URL for the keep flow. Unset today: mock clients (code 123456, no emails). */
+  /** Validated by src/env.ts; read it through src/api-url.ts. */
   readonly VITE_API_URL?: string;
 }

@@ -1,4 +1,4 @@
-// "Get Ámbar": the other places Ámbar lives (extension, mobile, desktop), from @ambar/core PLATFORMS.
+// "Get Ambar": the other places Ambar lives (extension, mobile, desktop), from @ambar/core PLATFORMS.
 // Not available yet = visible but disabled, with its status; with a downloadUrl it becomes a link.
 import { PLATFORMS, type PlatformId } from "@ambar/core";
 import { CaretDownIcon, DesktopIcon, DeviceMobileIcon, GlobeIcon, PuzzlePieceIcon, type Icon } from "@phosphor-icons/react";
@@ -21,7 +21,7 @@ export function GetAmbarMenu({ container }: { container?: MenuContainer }) {
   return (
     <MenuRoot>
       <MenuTrigger className={buttonVariants({ tone: "cloud", size: "sm", className: "group rounded-full" })}>
-        Get Ámbar
+        Get Ambar
         <CaretDownIcon weight="bold" aria-hidden className="transition-transform duration-200 ease-out-soft group-data-popup-open:rotate-180 motion-reduce:transition-none" />
       </MenuTrigger>
       <MenuContent align="end" container={container} className="w-80">

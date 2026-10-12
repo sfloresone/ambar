@@ -1,23 +1,24 @@
-import type { Session } from "@ambar/core";
 import { buttonVariants } from "@ambar/ui/components/button";
 import { GetAmbarMenu } from "@ambar/ui/components/get-ambar-menu";
 import { IRIS_ENTRY, Iris, isIrisEntry } from "@ambar/ui/components/iris";
+import { ToastProvider, Toaster } from "@ambar/ui/components/toaster";
 import { UserMenu } from "@ambar/ui/components/user-menu";
-import { PAGE_FRAME, PILL_BRAND, PILL_HEADER, PILL_HEADER_WRAP, PILL_LINK } from "@ambar/ui/lib/layout";
+import { APP_FRAME, PILL_BRAND, PILL_HEADER, PILL_HEADER_WRAP, PILL_LINK } from "@ambar/ui/lib/layout";
+import { useAutoHide } from "@ambar/ui/lib/auto-hide";
+import { createMockLibrary } from "@ambar/ui/lib/library-mock";
 import { useSession } from "@ambar/ui/lib/session";
 import { cn } from "@ambar/ui/lib/utils";
-import { useEffect, useRef, useState } from "react";
-import { Link, NavLink, Outlet, useLocation, useNavigate, useOutletContext, useSearchParams } from "react-router";
+import { LibraryProvider } from "@ambar/ui/screens/library/library-context";
+import { useSearchShortcut } from "@ambar/ui/screens/library/search-palette";
+import { FoldersIcon, FrameCornersIcon, ImagesIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { Link, NavLink, Outlet, useNavigate, useSearchParams } from "react-router";
 
-/** What every route can read from the layout. */
-type AppContext = {
-  session: Session | null | undefined;
-  signOut: () => Promise<void>;
-};
-
-export function useAppSession(): AppContext {
-  return useOutletContext<AppContext>();
-}
+import { apiUrl } from "../api-url.ts";
+import { MomentViewerHost } from "../moment-viewer-host.tsx";
+import { useFullBleed } from "../route-handle.ts";
+import { SearchHost } from "../search-host.tsx";
+import type { AppContext } from "../session.ts";
 
 /** Set by index.html before any JS when the landing hands off with the iris entry flag. */
 function arrivingThroughIris(): boolean {
@@ -30,12 +31,16 @@ export function AppLayout() {
   const [arrived, setArrived] = useState(arrivingThroughIris);
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
-  const header = useRef<HTMLElement>(null);
-  const { pathname } = useLocation();
-  const { session, refresh, signOut } = useSession(import.meta.env.VITE_API_URL);
+  const fullBleed = useFullBleed();
+  // Steps aside while content is in use; on the Canvas it also hides when left alone.
+  const { hidden, ref: header } = useAutoHide({ idleMs: fullBleed ? 2500 : undefined });
+  const [searching, setSearching] = useState(false);
 
-  // Re-read on every route change: signing in on /login lands on / with a fresh session.
-  useEffect(() => refresh(), [pathname, refresh]);
+  useSearchShortcut(useCallback(() => setSearching(true), []));
+  // Read once here; /login calls refresh() after signing in, sign out updates it directly.
+  const { session, refresh, signOut } = useSession(apiUrl);
+  // Mock data and a simulated agent until the API serves the library; same contract as the real client.
+  const [library] = useState(createMockLibrary);
 
   async function signOutAndLeave() {
     await signOut();
@@ -67,34 +72,85 @@ export function AppLayout() {
   }
 
   return (
-    <div className="flex min-h-svh flex-col">
-      {/* Mounted in the same render that sees ?entry=iris, so no frame shows the page uncovered. */}
-      {(arrived || isIrisEntry(params)) && <Iris state="opening" onDone={opened} />}
-      <header ref={header} className={PILL_HEADER_WRAP}>
-        <div className={cn(PILL_HEADER, session && "gap-3 pl-2.5 sm:gap-6")}>
-          {session && (
-            <UserMenu container={header} email={session.email} onSettings={() => navigate("/settings")} onSignOut={signOutAndLeave} />
-          )}
-          <Link to="/" className={PILL_BRAND}>
-            Ámbar
-          </Link>
-          <nav aria-label="Main" className="flex gap-1 text-sm">
-            <NavLink to="/" end className={PILL_LINK}>
-              Moments
-            </NavLink>
-          </nav>
-          {/* Nothing while the session loads, so a signed-in user never sees "Sign in" flash. */}
-          {session === null && (
-            <Link to="/login" className={buttonVariants({ tone: "cloud", size: "sm", className: "rounded-full" })}>
-              Sign in
-            </Link>
-          )}
-          {session && <GetAmbarMenu container={header} />}
+    <ToastProvider>
+      <LibraryProvider client={library}>
+        <div className="flex min-h-svh flex-col">
+          {/* Mounted in the same render that sees ?entry=iris, so no frame shows the page uncovered. */}
+          {(arrived || isIrisEntry(params)) && <Iris state="opening" onDone={opened} />}
+          <header
+            ref={header}
+            className={cn(
+              PILL_HEADER_WRAP,
+              "transition-[translate,opacity] duration-300 ease-out-soft motion-reduce:transition-[opacity]",
+              hidden && "pointer-events-none -translate-y-24 opacity-0 motion-reduce:translate-y-0",
+            )}
+          >
+            <div className={cn(PILL_HEADER, "gap-2 pl-4 sm:gap-4", session && "pl-2.5")}>
+              {session && (
+                <UserMenu
+                  container={header}
+                  email={session.email}
+                  onTrash={() => navigate("/trash")}
+                  onSettings={() => navigate("/settings")}
+                  onSignOut={signOutAndLeave}
+                />
+              )}
+              <Link to="/" className={cn(PILL_BRAND, "mr-1 sm:mr-3")}>
+                Ambar
+              </Link>
+              <nav aria-label="Sections" className="flex text-sm">
+                <Section to="/" end icon={<ImagesIcon weight="bold" />}>
+                  Moments
+                </Section>
+                <Section to="/collections" icon={<FoldersIcon weight="bold" />}>
+                  Collections
+                </Section>
+                <Section to="/canvas" icon={<FrameCornersIcon weight="bold" />}>
+                  Canvas
+                </Section>
+              </nav>
+              <button type="button" onClick={() => setSearching(true)} className={cn(PILL_LINK, "flex items-center gap-2")}>
+                <MagnifyingGlassIcon weight="bold" aria-hidden className="size-4" />
+                <span className="sr-only">Search</span>
+                {/* Visible shortcut, part of the name: "Search ⌘K". */}
+                <kbd className="hidden rounded-md border px-1.5 font-sans text-xs md:inline">⌘K</kbd>
+              </button>
+              {/* Nothing while the session loads, so a signed-in user never sees "Sign in" flash. */}
+              {session === null && (
+                <Link to="/login" className={buttonVariants({ tone: "cloud", size: "sm", className: "rounded-full" })}>
+                  Sign in
+                </Link>
+              )}
+              {session && <GetAmbarMenu container={header} />}
+            </div>
+          </header>
+          <main className={cn(!fullBleed && APP_FRAME, "flex flex-1 flex-col [&_h1:focus]:outline-hidden", !fullBleed && "py-10 sm:py-14")}>
+            <Outlet context={{ session, refresh, signOut: signOutAndLeave } satisfies AppContext} />
+          </main>
         </div>
-      </header>
-      <main className={cn(PAGE_FRAME, "flex flex-1 flex-col py-16 sm:py-24 [&_h1:focus]:outline-hidden")}>
-        <Outlet context={{ session, signOut: signOutAndLeave } satisfies AppContext} />
-      </main>
-    </div>
+        <MomentViewerHost />
+        <SearchHost open={searching} onOpenChange={setSearching} />
+        <Toaster />
+      </LibraryProvider>
+    </ToastProvider>
+  );
+}
+
+type SectionProps = {
+  to: string;
+  end?: boolean;
+  icon: ReactNode;
+  children: string;
+};
+
+/** A section in the pill: icon and label (label hidden on narrow screens, still named for screen readers). */
+function Section({ to, end, icon, children }: SectionProps) {
+  return (
+    <NavLink to={to} end={end} aria-label={children} className={cn(PILL_LINK, "flex items-center gap-1.5 px-2.5 sm:px-3 [&_svg]:size-4")}>
+      {icon}
+      <span aria-hidden className="hidden sm:inline">
+        {children}
+      </span>
+    </NavLink>
   );
 }

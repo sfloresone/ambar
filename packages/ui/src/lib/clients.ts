@@ -11,10 +11,12 @@ import {
   type Moment,
   type MomentFile,
   type Session,
+  type SignedIn,
   type UploadClient,
   type UploadProgress,
 } from "@ambar/core";
 
+import { createHttpAuth } from "./http-auth.ts";
 import { readItem, removeItem, writeItem } from "./storage.ts";
 import { wait } from "./wait.ts";
 
@@ -29,10 +31,40 @@ const RESEND_AFTER_MS = 30_000;
 
 const SESSION_KEY = "ambar.session";
 
+/** Emails the mock has signed in before, so it can tell sign up from sign in. */
+const MOCK_ACCOUNTS_KEY = "ambar.mock-accounts";
+
+/** Same rule as the API: this many wrong codes burn the code. */
+const MOCK_MAX_ATTEMPTS = 5;
+
+/** Wrong codes per email since its last code request. */
+const mockAttempts = new Map<string, number>();
+
+/** Remembers email as an account; true if it is new. */
+function rememberAccount(email: string): boolean {
+  const accounts = (readItem(MOCK_ACCOUNTS_KEY) ?? "").split(",").filter(Boolean);
+
+  if (accounts.includes(email)) {
+    return false;
+  }
+
+  writeItem(MOCK_ACCOUNTS_KEY, [...accounts, email].join(","));
+
+  return true;
+}
+
+function signInMock(email: string): SignedIn {
+  const session = sessionFor(email);
+
+  writeSession(session);
+
+  return { session, created: rememberAccount(session.email) };
+}
+
 export type Clients = {
   auth: AuthClient;
   upload: UploadClient;
-  /** True while there is no real API; the UI may show mock-only hints. */
+  /** True while auth runs on the mock (no API URL); the UI may show mock-only hints. */
   mock: boolean;
 };
 
@@ -92,6 +124,8 @@ function createMockAuth(): AuthClient {
         throw new AuthError("invalid-email", "That doesn't look like an email address.");
       }
 
+      mockAttempts.delete(normalizeEmail(email));
+
       return {
         email: normalizeEmail(email),
         expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
@@ -101,15 +135,24 @@ function createMockAuth(): AuthClient {
     async verifyCode(email, code) {
       await wait(MOCK_LATENCY_MS);
 
-      if (code.length !== CODE_LENGTH || code !== MOCK_CODE) {
-        throw new AuthError("invalid-code", "That code didn't work. Try again or get a new one.");
+      const key = normalizeEmail(email);
+      const attempts = mockAttempts.get(key) ?? 0;
+
+      if (attempts >= MOCK_MAX_ATTEMPTS) {
+        throw new AuthError("too-many-attempts", "Too many wrong codes. Get a new one.");
       }
 
-      const session = sessionFor(email);
+      if (code.length !== CODE_LENGTH || code !== MOCK_CODE) {
+        mockAttempts.set(key, attempts + 1);
 
-      writeSession(session);
+        if (attempts + 1 >= MOCK_MAX_ATTEMPTS) {
+          throw new AuthError("too-many-attempts", "Too many wrong codes. Get a new one.");
+        }
 
-      return session;
+        throw new AuthError("invalid-code", "That code didn't work.", { attemptsLeft: MOCK_MAX_ATTEMPTS - attempts - 1 });
+      }
+
+      return signInMock(key);
     },
     async verifyLink(token) {
       await wait(MOCK_LATENCY_MS);
@@ -120,11 +163,7 @@ function createMockAuth(): AuthClient {
         throw new AuthError("expired-code", "That link has expired. Request a new code.");
       }
 
-      const session = sessionFor(email);
-
-      writeSession(session);
-
-      return session;
+      return signInMock(email);
     },
     async signOut() {
       writeSession(null);
@@ -148,7 +187,7 @@ function createMockUpload(): UploadClient {
         onProgress?.(step / steps);
       }
 
-      const base = { id: crypto.randomUUID(), createdAt: new Date().toISOString(), sharedWith: [] };
+      const base = { id: crypto.randomUUID(), createdAt: new Date().toISOString(), sharedWith: [], topics: [], collectionIds: [] };
 
       return momentKindOf(file) === "clip"
         ? { ...base, kind: "clip", mediaUrl: `mock://${session.userId}/${file.name}`, durationMs: 0 }
@@ -159,8 +198,8 @@ function createMockUpload(): UploadClient {
 
 export function createClients(apiUrl?: string): Clients {
   if (apiUrl !== undefined && apiUrl !== "") {
-    // Real HTTP clients arrive with apps/api. Failing loudly beats silently using the mock in production.
-    throw new Error(`API clients for ${apiUrl} are not implemented yet. Leave PUBLIC_API_URL unset to use the mock.`);
+    // Real auth against apps/api. Uploads stay on the mock until the upload endpoints exist.
+    return { auth: createHttpAuth(apiUrl), upload: createMockUpload(), mock: false };
   }
 
   return { auth: createMockAuth(), upload: createMockUpload(), mock: true };

@@ -34,9 +34,15 @@
   --color-ink: #141414;
   --color-cloud: #ffffff;
   --color-sky: #93bbcb;
+  /* Sky for text and links: the same hue, dark enough to read (5.5:1 on cloud). Never use sky itself for text. */
+  --color-sky-deep: #3f6f80;
   --color-leaf: #537234;
   /* Only for the amber specimen asset on the pricing section. Never text, never UI. */
   --color-resin: #e09a2f;
+  /* Fluid side padding and gaps: 16 px on a phone, growing with the window to 48 px. No jumps between sizes. */
+  --spacing-gutter: clamp(1rem, 0.25rem + 3vw, 3rem);
+  /* The app's content width (the landing keeps its 64 rem frame). */
+  --container-app: 100rem;
 }
 
 @theme inline {

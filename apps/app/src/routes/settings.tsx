@@ -2,7 +2,7 @@ import { plans } from "@ambar/core";
 import { Button } from "@ambar/ui/components/button";
 import { Link } from "react-router";
 
-import { useAppSession } from "./app-layout.tsx";
+import { useAppSession } from "../session.ts";
 
 // Settings inside the same frame. Account and plan only; usage arrives with the real API.
 export function SettingsRoute() {

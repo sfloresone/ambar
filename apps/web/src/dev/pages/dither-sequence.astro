@@ -1,0 +1,17 @@
+---
+import DevLayout from "../components/dev-layout.astro";
+import { DitherSequence } from "../components/dither-sequence.tsx";
+---
+
+<DevLayout title="Dither sequence">
+  <p slot="lead" class="max-w-2xl text-muted-foreground">
+    Twelve photos from Paper. Dithering builds with each frame while the branches, leaves and sky stay recognizable.
+    Compare three prepared treatments with the originals, or choose Live shader to explore the Ambar palette and adjust the filter yourself.
+  </p>
+  <DitherSequence client:load />
+  <p class="max-w-2xl text-sm text-muted-foreground">
+    Exported with Paper's Image Dithering filter. Each treatment increases the pixel size and filter blend while reducing color steps.
+    Prepared treatments play WebP images. Live shader runs Paper's ImageDithering in the browser and lets you download the settings for all twelve frames.
+    This experiment is available only in development.
+  </p>
+</DevLayout>

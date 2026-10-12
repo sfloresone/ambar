@@ -1,4 +1,4 @@
-// Tactile surface shared by every Ámbar control. Adapted from opensourceui (MIT, github.com/bidyut10/opensourceui).
+// Tactile surface shared by every Ambar control. Adapted from opensourceui (MIT, github.com/bidyut10/opensourceui).
 // Subtle bevel: a 1px hairline, a 1-3px drop and a soft inner shade at the bottom. No long blurs.
 import { cn } from "./utils.ts";
 

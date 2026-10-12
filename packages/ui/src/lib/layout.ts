@@ -4,6 +4,14 @@
 /** Page content: same width and side padding as the landing. */
 export const PAGE_FRAME = "mx-auto w-full max-w-5xl px-6";
 
+/** PAGE_FRAME's content width (max-w-5xl minus px-6 on each side), for surfaces that float above the page
+ * (the sign-in dialog): their side edges line up with the page content at every width. */
+export const FRAME_WIDTH = "w-[calc(100%-3rem)] max-w-[calc(64rem-3rem)]";
+
+/** App content: wider than the landing (up to 100 rem) with fluid side padding (the gutter token), so it
+ * uses a desktop's space and grows smoothly instead of jumping between breakpoints. */
+export const APP_FRAME = "mx-auto w-full max-w-app px-gutter";
+
 /** Wrapper that keeps the pill floating at the top. */
 export const PILL_HEADER_WRAP = "sticky top-3 z-40 px-3";
 

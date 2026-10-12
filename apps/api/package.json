@@ -1,0 +1,13 @@
+{
+  "name": "@ambar/api",
+  "private": true,
+  "scripts": {
+    "dev": "go run .",
+    "build": "go build -trimpath -ldflags='-s -w' -o bin/api .",
+    "build:linux": "CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o bin/api-linux-amd64 .",
+    "test": "go test -race ./...",
+    "typecheck": "test -z \"$(gofmt -l .)\" && go vet ./... && go tool staticcheck ./...",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down"
+  }
+}

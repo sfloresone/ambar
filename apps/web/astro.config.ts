@@ -1,7 +1,7 @@
 import react from "@astrojs/react";
 import tailwindcss from "@tailwindcss/vite";
 import type { AstroIntegration } from "astro";
-import { defineConfig } from "astro/config";
+import { defineConfig, envField } from "astro/config";
 
 import { devSections } from "./src/dev/sections.ts";
 
@@ -32,6 +32,14 @@ export default defineConfig({
   // TODO: final domain (ambar.page or ambar.one).
   site: "https://ambar.page",
   integrations: [react(), devGallery()],
+  // Public by nature (bundled into the page): URLs only, never secrets. Validated at dev/build start.
+  env: {
+    schema: {
+      PUBLIC_APP_URL: envField.string({ context: "client", access: "public", url: true, default: "http://localhost:5173" }),
+      // Unset: the keep flow uses the mock clients (code 123456, no emails).
+      PUBLIC_API_URL: envField.string({ context: "client", access: "public", url: true, optional: true }),
+    },
+  },
   vite: {
     plugins: [tailwindcss()],
   },

@@ -1,4 +1,4 @@
-// The user's moment, pinned on every step of the keep flow, with a status line that tells the story:
+// The user's moment, a compact row on every step of the keep flow, with a status line that tells the story:
 // Ready to keep → Waiting for you → Keeping… 64% → Kept.
 import { CheckIcon, ImageBrokenIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import { motion, useReducedMotion } from "motion/react";
@@ -15,8 +15,6 @@ type MomentCardProps = {
   status: MomentStatus;
   /** Upload progress, 0 to 1, while keeping. */
   progress?: number;
-  /** compact: small row. full: large preview. responsive: row on small screens, large from md. */
-  layout?: "compact" | "full" | "responsive";
 };
 
 const STATUS_TEXT: Record<Exclude<MomentStatus, "keeping">, string> = {
@@ -30,29 +28,17 @@ function statusText(status: MomentStatus, progress: number): string {
   return status === "keeping" ? `Keeping… ${Math.round(progress * 100)}%` : STATUS_TEXT[status];
 }
 
-const LAYOUT = {
-  compact: { card: "flex items-center gap-3 p-2.5 pr-4", media: "size-16 rounded-xl", caption: "" },
-  full: { card: "flex flex-col", media: "aspect-4/3 w-full", caption: "px-4 py-3" },
-  responsive: {
-    card: "flex items-center gap-3 p-2.5 pr-4 md:flex-col md:items-stretch md:gap-0 md:p-0",
-    media: "size-16 rounded-xl md:aspect-4/3 md:size-auto md:w-full md:rounded-none",
-    caption: "md:px-4 md:py-3",
-  },
-} as const;
-
-export function MomentCard({ file, status, progress = 0, layout = "responsive" }: MomentCardProps) {
+export function MomentCard({ file, status, progress = 0 }: MomentCardProps) {
   const preview = useMomentPreview(file);
-  const styles = LAYOUT[layout];
-  const compact = layout === "compact";
 
   return (
     <figure
       data-slot="moment-card"
       data-status={status}
-      className={cn("overflow-hidden rounded-2xl border bg-card", styles.card)}
+      className="flex items-center gap-3 overflow-hidden rounded-2xl border bg-card p-2.5 pr-4"
     >
-      <div className={cn("relative shrink-0 overflow-hidden bg-muted", styles.media)}>
-        {preview !== null && <PreviewMedia preview={preview} name={file.name} compact={compact} />}
+      <div className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-muted">
+        {preview !== null && <PreviewMedia preview={preview} name={file.name} />}
         {status === "keeping" && (
           <span
             aria-hidden
@@ -61,7 +47,7 @@ export function MomentCard({ file, status, progress = 0, layout = "responsive" }
           />
         )}
       </div>
-      <figcaption className={cn("flex min-w-0 flex-col gap-0.5", styles.caption)}>
+      <figcaption className="flex min-w-0 flex-col gap-0.5">
         <span className="truncate text-sm font-medium">{file.name}</span>
         <span aria-live="polite" className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <StatusIcon status={status} />
@@ -125,19 +111,17 @@ function useMomentPreview(file: File): MomentPreview | null {
 type PreviewMediaProps = {
   preview: MomentPreview;
   name: string;
-  compact: boolean;
 };
 
-function PreviewMedia({ preview, name, compact }: PreviewMediaProps) {
+function PreviewMedia({ preview, name }: PreviewMediaProps) {
   const reduceMotion = useReducedMotion() === true;
   const [loaded, setLoaded] = useState(false);
   const [broken, setBroken] = useState(false);
 
   if (preview.kind === "unsupported" || broken) {
     return (
-      <div className="flex size-full flex-col items-center justify-center gap-1.5 p-3 text-center">
+      <div className="grid size-full place-items-center" title="This browser can't show a preview of it.">
         <ImageBrokenIcon weight="bold" aria-hidden className="size-6 text-muted-foreground" />
-        {!compact && <p className="text-sm text-muted-foreground">This browser can't show a preview of it.</p>}
       </div>
     );
   }
@@ -148,7 +132,6 @@ function PreviewMedia({ preview, name, compact }: PreviewMediaProps) {
         src={preview.url}
         muted
         playsInline
-        controls={!compact}
         onError={() => setBroken(true)}
         aria-label={`Your moment: ${name}`}
         className="size-full object-cover"

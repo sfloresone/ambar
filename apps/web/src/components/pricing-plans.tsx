@@ -1,6 +1,8 @@
+import { Annotation } from "@ambar/ui/components/annotation";
 import { buttonVariants } from "@ambar/ui/components/button";
 import { FirstMomentDialog } from "@ambar/ui/components/first-moment-dialog";
 import { SegmentedControl } from "@ambar/ui/components/segmented-control";
+import { cn } from "@ambar/ui/lib/utils";
 import { CheckIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
@@ -76,6 +78,37 @@ export function PricingPlans({ plans, appUrl, onboardingBackdrop, apiUrl, seed, 
   );
 }
 
+const BILLINGS: readonly Billing[] = ["monthly", "yearly"];
+
+type SwapProps = {
+  billing: Billing;
+  items: Record<Billing, ReactNode>;
+};
+
+/**
+ * Both values stacked in one grid cell; switching develops the new one in (fade, unblur, settle) while the
+ * old one leaves the other way. CSS only: no animation library on the landing for this.
+ */
+function Swap({ billing, items }: SwapProps) {
+  const activeIndex = BILLINGS.indexOf(billing);
+
+  return (
+    <span className="grid">
+      {BILLINGS.map((key, index) => (
+        <span
+          key={key}
+          className={cn(
+            "col-start-1 row-start-1 transition-[opacity,translate,filter] duration-500 ease-out-soft motion-reduce:transition-none",
+            index === activeIndex ? "blur-none" : cn("pointer-events-none opacity-0 blur-[6px]", index < activeIndex ? "-translate-y-3" : "translate-y-3"),
+          )}
+        >
+          {items[key]}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 type PriceProps = {
   plan: Plan;
   billing: Billing;
@@ -87,7 +120,9 @@ function Price({ plan, billing }: PriceProps) {
       <div className="flex flex-col gap-1">
         <p className="flex items-baseline gap-2">
           <span className="font-heading text-4xl font-bold">{euros.format(0)}</span>
-          <span className="text-muted-foreground">forever</span>
+          <span className="text-muted-foreground">
+            <Annotation delayMs={500}>forever</Annotation>
+          </span>
         </p>
         {/* Same height as the paid plan's billing line, so both placards align. */}
         <p aria-hidden className="min-h-5" />
@@ -95,17 +130,55 @@ function Price({ plan, billing }: PriceProps) {
     );
   }
 
-  const yearly = billing === "yearly" && plan.yearly !== undefined;
+  const yearly = plan.yearly ?? plan.monthly * 12;
+  const fullYear = plan.monthly * 12;
+  const saving = Math.round((1 - yearly / fullYear) * 100);
+  const isYearly = billing === "yearly";
 
   return (
-    <div aria-live="polite" className="flex flex-col gap-1">
-      <p className="flex items-baseline gap-2">
-        <span className="font-heading text-4xl font-bold">{euros.format(yearly ? (plan.yearly ?? 0) : plan.monthly)}</span>
-        <span className="text-muted-foreground">{yearly ? "a year" : "a month"}</span>
+    <div className="flex flex-col gap-1">
+      {/* What assistive tech hears; the animated stack below is visual only. */}
+      <p aria-live="polite" className="sr-only">
+        {isYearly ? `${euros.format(yearly)} a year instead of ${euros.format(fullYear)}, ${euros.format(yearly / 12)} a month` : `${euros.format(plan.monthly)} a month`}
       </p>
-      <p className="min-h-5 text-sm text-muted-foreground">
-        {yearly && plan.yearly !== undefined ? `${euros.format(plan.yearly / 12)} a month, billed yearly` : ""}
-      </p>
+      <div aria-hidden className="flex flex-col gap-1">
+        <Swap
+          billing={billing}
+          items={{
+            monthly: (
+              <span className="flex items-baseline gap-2">
+                <span className="font-heading text-4xl font-bold">{euros.format(plan.monthly)}</span>
+                <span className="text-muted-foreground">a month</span>
+              </span>
+            ),
+            yearly: (
+              <span className="flex items-baseline gap-2">
+                <Annotation mark="strike" drawn={isYearly} delayMs={250} className="mr-1 font-heading text-xl font-bold text-muted-foreground">
+                  {euros.format(fullYear)}
+                </Annotation>
+                <span className="font-heading text-4xl font-bold">{euros.format(yearly)}</span>
+                <span className="text-muted-foreground">a year</span>
+              </span>
+            ),
+          }}
+        />
+        <span className="min-h-5 text-sm text-muted-foreground">
+          <Swap
+            billing={billing}
+            items={{
+              monthly: " ",
+              yearly: (
+                <>
+                  {euros.format(yearly / 12)} a month, billed yearly ·{" "}
+                  <Annotation drawn={isYearly} delayMs={400} className="font-medium text-foreground">
+                    save {saving}%
+                  </Annotation>
+                </>
+              ),
+            }}
+          />
+        </span>
+      </div>
     </div>
   );
 }

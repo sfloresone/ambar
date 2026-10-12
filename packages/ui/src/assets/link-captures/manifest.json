@@ -1,0 +1,35 @@
+[
+  {
+    "name": "example",
+    "url": "https://example.org",
+    "title": "Example Domain",
+    "status": 200,
+    "capturedAt": "2026-10-08T15:30:15.032Z",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    }
+  },
+  {
+    "name": "amber",
+    "url": "https://en.wikipedia.org/wiki/Amber",
+    "title": "Amber - Wikipedia",
+    "status": 200,
+    "capturedAt": "2026-10-08T15:30:15.328Z",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    }
+  },
+  {
+    "name": "w3c",
+    "url": "https://www.w3.org/",
+    "title": "W3C",
+    "status": 200,
+    "capturedAt": "2026-10-08T15:30:15.077Z",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    }
+  }
+]

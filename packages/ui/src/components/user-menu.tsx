@@ -1,5 +1,5 @@
 // Account menu: who you are, settings, sign out. Navigation comes in as callbacks (portable).
-import { GearSixIcon, SignOutIcon } from "@phosphor-icons/react";
+import { GearSixIcon, SignOutIcon, TrashIcon } from "@phosphor-icons/react";
 
 import { PRESS_ACTIVE, RAISED_LIGHT } from "../lib/tactile.ts";
 import { cn } from "../lib/utils.ts";
@@ -7,12 +7,13 @@ import { MenuContent, type MenuContainer, MenuGroup, MenuGroupLabel, MenuItem, M
 
 type UserMenuProps = {
   email: string;
+  onTrash: () => void;
   onSettings: () => void;
   onSignOut: () => void;
   container?: MenuContainer;
 };
 
-export function UserMenu({ email, onSettings, onSignOut, container }: UserMenuProps) {
+export function UserMenu({ email, onTrash, onSettings, onSignOut, container }: UserMenuProps) {
   return (
     <MenuRoot>
       <MenuTrigger
@@ -35,6 +36,10 @@ export function UserMenu({ email, onSettings, onSignOut, container }: UserMenuPr
           </MenuGroupLabel>
         </MenuGroup>
         <MenuSeparator />
+        <MenuItem onClick={onTrash}>
+          <TrashIcon weight="bold" aria-hidden />
+          Trash
+        </MenuItem>
         <MenuItem onClick={onSettings}>
           <GearSixIcon weight="bold" aria-hidden />
           Settings

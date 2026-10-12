@@ -1,0 +1,544 @@
+{
+  "source": "Paper ImageDithering @paper-design/shaders-react@0.0.81",
+  "width": 600,
+  "height": 800,
+  "order": "User-confirmed original frame order: 01, 02, 04, 03, 06, 05, 08, 07, 10, 09, 12, 11. Files are numbered by their corrected playback position.",
+  "sources": [
+    {
+      "frame": 1,
+      "name": "Green tree branch",
+      "paperNode": "3V-0",
+      "url": "https://app.paper.design/file-assets/01M2DBYND75EQX582G9YCD60Q8/01M48KQB3CQWH818R4RE9HHB0E.jpg",
+      "originalFrame": 1
+    },
+    {
+      "frame": 2,
+      "name": "Tree branch with fruit",
+      "paperNode": "3Q-0",
+      "url": "https://app.paper.design/file-assets/01M2DBYND75EQX582G9YCD60Q8/01M48KPW2QEE2EZ0F8MZA920T0.jpg",
+      "originalFrame": 2
+    },
+    {
+      "frame": 3,
+      "name": "Tree foliage view",
+      "paperNode": "3U-0",
+      "url": "https://app.paper.design/file-assets/01M2DBYND75EQX582G9YCD60Q8/01M48KQB3C7RFKMZV42N3ETR8C.jpg",
+      "originalFrame": 4
+    },
+    {
+      "frame": 4,
+      "name": "Green tree branch",
+      "paperNode": "3T-0",
+      "url": "https://app.paper.design/file-assets/01M2DBYND75EQX582G9YCD60Q8/01M48KQB3CGA445M8KYX1NAWCP.jpg",
+      "originalFrame": 3
+    },
+    {
+      "frame": 5,
+      "name": "Tree view up",
+      "paperNode": "3S-0",
+      "url": "https://app.paper.design/file-assets/01M2DBYND75EQX582G9YCD60Q8/01M48KQB3C2JF332NY216C7RQQ.jpg",
+      "originalFrame": 6
+    },
+    {
+      "frame": 6,
+      "name": "Tree foliage view",
+      "paperNode": "3R-0",
+      "url": "https://app.paper.design/file-assets/01M2DBYND75EQX582G9YCD60Q8/01M48KQB3CW4HD56XWDF8F8G9W.jpg",
+      "originalFrame": 5
+    },
+    {
+      "frame": 7,
+      "name": "Tree foliage view",
+      "paperNode": "41-0",
+      "url": "https://app.paper.design/file-assets/01M2DBYND75EQX582G9YCD60Q8/01M48KRFWVR22RYCDQ48ZR7CZ6.jpg",
+      "originalFrame": 8
+    },
+    {
+      "frame": 8,
+      "name": "Tree canopy view",
+      "paperNode": "40-0",
+      "url": "https://app.paper.design/file-assets/01M2DBYND75EQX582G9YCD60Q8/01M48KRFWVXFV63XYBQ8QDF73R.jpg",
+      "originalFrame": 7
+    },
+    {
+      "frame": 9,
+      "name": "Tree branch view",
+      "paperNode": "3Z-0",
+      "url": "https://app.paper.design/file-assets/01M2DBYND75EQX582G9YCD60Q8/01M48KRFWV5T5DVD2Z9JXF7P7F.jpg",
+      "originalFrame": 10
+    },
+    {
+      "frame": 10,
+      "name": "Tree canopy view",
+      "paperNode": "3Y-0",
+      "url": "https://app.paper.design/file-assets/01M2DBYND75EQX582G9YCD60Q8/01M48KRFWV5YS98HA6MQD6BGPT.jpg",
+      "originalFrame": 9
+    },
+    {
+      "frame": 11,
+      "name": "Tree branch frame",
+      "paperNode": "3X-0",
+      "url": "https://app.paper.design/file-assets/01M2DBYND75EQX582G9YCD60Q8/01M48KRFWVYBQ5ZJB9H8YR6RY9.jpg",
+      "originalFrame": 12
+    },
+    {
+      "frame": 12,
+      "name": "Tree canopy view",
+      "paperNode": "3W-0",
+      "url": "https://app.paper.design/file-assets/01M2DBYND75EQX582G9YCD60Q8/01M48KRFWTKD70HX5V1XW7MP0R.jpg",
+      "originalFrame": 11
+    }
+  ],
+  "profiles": [
+    {
+      "id": "fine",
+      "name": "Fine grain",
+      "frames": [
+        {
+          "frame": 1,
+          "type": "8x8",
+          "originalColors": true,
+          "inverted": false,
+          "size": 0.65,
+          "colorSteps": 7,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.15
+        },
+        {
+          "frame": 2,
+          "type": "8x8",
+          "originalColors": true,
+          "inverted": false,
+          "size": 0.745,
+          "colorSteps": 7,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.216
+        },
+        {
+          "frame": 3,
+          "type": "8x8",
+          "originalColors": true,
+          "inverted": false,
+          "size": 0.841,
+          "colorSteps": 6,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.283
+        },
+        {
+          "frame": 4,
+          "type": "8x8",
+          "originalColors": true,
+          "inverted": false,
+          "size": 0.936,
+          "colorSteps": 6,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.349
+        },
+        {
+          "frame": 5,
+          "type": "8x8",
+          "originalColors": true,
+          "inverted": false,
+          "size": 1.032,
+          "colorSteps": 6,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.415
+        },
+        {
+          "frame": 6,
+          "type": "8x8",
+          "originalColors": true,
+          "inverted": false,
+          "size": 1.127,
+          "colorSteps": 5,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.482
+        },
+        {
+          "frame": 7,
+          "type": "8x8",
+          "originalColors": true,
+          "inverted": false,
+          "size": 1.223,
+          "colorSteps": 5,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.548
+        },
+        {
+          "frame": 8,
+          "type": "8x8",
+          "originalColors": true,
+          "inverted": false,
+          "size": 1.318,
+          "colorSteps": 4,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.615
+        },
+        {
+          "frame": 9,
+          "type": "8x8",
+          "originalColors": true,
+          "inverted": false,
+          "size": 1.414,
+          "colorSteps": 4,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.681
+        },
+        {
+          "frame": 10,
+          "type": "8x8",
+          "originalColors": true,
+          "inverted": false,
+          "size": 1.509,
+          "colorSteps": 4,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.747
+        },
+        {
+          "frame": 11,
+          "type": "8x8",
+          "originalColors": true,
+          "inverted": false,
+          "size": 1.605,
+          "colorSteps": 3,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.814
+        },
+        {
+          "frame": 12,
+          "type": "8x8",
+          "originalColors": true,
+          "inverted": false,
+          "size": 1.7,
+          "colorSteps": 3,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.88
+        }
+      ]
+    },
+    {
+      "id": "graphic",
+      "name": "Graphic grain",
+      "frames": [
+        {
+          "frame": 1,
+          "type": "4x4",
+          "originalColors": true,
+          "inverted": false,
+          "size": 0.8,
+          "colorSteps": 6,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.18
+        },
+        {
+          "frame": 2,
+          "type": "4x4",
+          "originalColors": true,
+          "inverted": false,
+          "size": 1,
+          "colorSteps": 6,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.247
+        },
+        {
+          "frame": 3,
+          "type": "4x4",
+          "originalColors": true,
+          "inverted": false,
+          "size": 1.2,
+          "colorSteps": 5,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.315
+        },
+        {
+          "frame": 4,
+          "type": "4x4",
+          "originalColors": true,
+          "inverted": false,
+          "size": 1.4,
+          "colorSteps": 5,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.382
+        },
+        {
+          "frame": 5,
+          "type": "4x4",
+          "originalColors": true,
+          "inverted": false,
+          "size": 1.6,
+          "colorSteps": 5,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.449
+        },
+        {
+          "frame": 6,
+          "type": "4x4",
+          "originalColors": true,
+          "inverted": false,
+          "size": 1.8,
+          "colorSteps": 4,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.516
+        },
+        {
+          "frame": 7,
+          "type": "4x4",
+          "originalColors": true,
+          "inverted": false,
+          "size": 2,
+          "colorSteps": 4,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.584
+        },
+        {
+          "frame": 8,
+          "type": "4x4",
+          "originalColors": true,
+          "inverted": false,
+          "size": 2.2,
+          "colorSteps": 3,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.651
+        },
+        {
+          "frame": 9,
+          "type": "4x4",
+          "originalColors": true,
+          "inverted": false,
+          "size": 2.4,
+          "colorSteps": 3,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.718
+        },
+        {
+          "frame": 10,
+          "type": "4x4",
+          "originalColors": true,
+          "inverted": false,
+          "size": 2.6,
+          "colorSteps": 3,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.785
+        },
+        {
+          "frame": 11,
+          "type": "4x4",
+          "originalColors": true,
+          "inverted": false,
+          "size": 2.8,
+          "colorSteps": 2,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.853
+        },
+        {
+          "frame": 12,
+          "type": "4x4",
+          "originalColors": true,
+          "inverted": false,
+          "size": 3,
+          "colorSteps": 2,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.92
+        }
+      ]
+    },
+    {
+      "id": "print",
+      "name": "Sky print",
+      "frames": [
+        {
+          "frame": 1,
+          "type": "8x8",
+          "originalColors": false,
+          "inverted": false,
+          "size": 0.6,
+          "colorSteps": 6,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.12
+        },
+        {
+          "frame": 2,
+          "type": "8x8",
+          "originalColors": false,
+          "inverted": false,
+          "size": 0.709,
+          "colorSteps": 6,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.187
+        },
+        {
+          "frame": 3,
+          "type": "8x8",
+          "originalColors": false,
+          "inverted": false,
+          "size": 0.818,
+          "colorSteps": 5,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.255
+        },
+        {
+          "frame": 4,
+          "type": "8x8",
+          "originalColors": false,
+          "inverted": false,
+          "size": 0.927,
+          "colorSteps": 5,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.322
+        },
+        {
+          "frame": 5,
+          "type": "8x8",
+          "originalColors": false,
+          "inverted": false,
+          "size": 1.036,
+          "colorSteps": 5,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.389
+        },
+        {
+          "frame": 6,
+          "type": "8x8",
+          "originalColors": false,
+          "inverted": false,
+          "size": 1.145,
+          "colorSteps": 4,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.456
+        },
+        {
+          "frame": 7,
+          "type": "8x8",
+          "originalColors": false,
+          "inverted": false,
+          "size": 1.255,
+          "colorSteps": 4,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.524
+        },
+        {
+          "frame": 8,
+          "type": "8x8",
+          "originalColors": false,
+          "inverted": false,
+          "size": 1.364,
+          "colorSteps": 3,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.591
+        },
+        {
+          "frame": 9,
+          "type": "8x8",
+          "originalColors": false,
+          "inverted": false,
+          "size": 1.473,
+          "colorSteps": 3,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.658
+        },
+        {
+          "frame": 10,
+          "type": "8x8",
+          "originalColors": false,
+          "inverted": false,
+          "size": 1.582,
+          "colorSteps": 3,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.725
+        },
+        {
+          "frame": 11,
+          "type": "8x8",
+          "originalColors": false,
+          "inverted": false,
+          "size": 1.691,
+          "colorSteps": 2,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.793
+        },
+        {
+          "frame": 12,
+          "type": "8x8",
+          "originalColors": false,
+          "inverted": false,
+          "size": 1.8,
+          "colorSteps": 2,
+          "colorBack": "#000000",
+          "colorFront": "#FFFFFF",
+          "colorHighlight": "#93bbcb",
+          "opacity": 0.86
+        }
+      ]
+    }
+  ]
+}

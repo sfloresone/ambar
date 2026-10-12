@@ -11,6 +11,8 @@
     "dev": "bun --filter './apps/*' dev",
     "dev:web": "bun --filter @ambar/web dev",
     "dev:app": "bun --filter @ambar/app dev",
+    "dev:api": "bun --filter @ambar/api dev",
+    "test:api": "bun --filter @ambar/api test",
     "build": "bun --filter './apps/*' build",
     "typecheck": "bun --filter '*' typecheck",
     "lint": "oxlint",

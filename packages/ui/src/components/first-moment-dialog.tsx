@@ -3,28 +3,31 @@ import { Dialog } from "@base-ui/react/dialog";
 import { XIcon } from "@phosphor-icons/react";
 import { lazy, Suspense, useEffect, useState, type ComponentType } from "react";
 
+import { FRAME_WIDTH } from "../lib/layout.ts";
+import { cn } from "../lib/utils.ts";
 import { Button, buttonVariants, type ButtonSize, type ButtonTone } from "./button.tsx";
 // Type-only: erased at build, so the lazy chunk stays out of the page bundle.
-import type { FirstMomentProps, OnboardingMode } from "./first-moment.tsx";
+import type { AuthDialogContentProps } from "./auth-dialog-content.tsx";
+import type { AuthMode } from "./auth-flow.tsx";
 
 
 // Motion and the dropzone stay out of the page bundle until they are needed.
 // Once the chunk is in, render it directly: going through lazy/Suspense again would hold the fallback
 // for React's ~300 ms Suspense throttle even though the code is already there.
-let loadedFirstMoment: ComponentType<FirstMomentProps> | null = null;
+let loadedContent: ComponentType<AuthDialogContentProps> | null = null;
 
-const loadFirstMoment = () =>
-  import("./first-moment.tsx").then((module) => {
-    loadedFirstMoment = module.default;
+const loadContent = () =>
+  import("./auth-dialog-content.tsx").then((module) => {
+    loadedContent = module.default;
 
     return module;
   });
 
-const LazyFirstMoment = lazy(loadFirstMoment);
+const LazyContent = lazy(loadContent);
 
 /** Rendered when the popup mounts (on open), so it picks the preloaded module if it's there. */
-function OnboardingContent(props: FirstMomentProps) {
-  const Content = loadedFirstMoment ?? LazyFirstMoment;
+function OnboardingContent(props: AuthDialogContentProps) {
+  const Content = loadedContent ?? LazyContent;
 
   return <Content {...props} />;
 }
@@ -41,7 +44,7 @@ function preload(backdropSrc: string | undefined) {
   }
 
   preloaded = true;
-  void loadFirstMoment();
+  void loadContent();
 
   if (backdropSrc !== undefined) {
     new Image().src = backdropSrc;
@@ -49,9 +52,9 @@ function preload(backdropSrc: string | undefined) {
 }
 
 type FirstMomentDialogProps = {
-  /** Where "Continue to Ámbar" goes once a moment is kept. */
+  /** Where "Continue to Ambar" goes once a moment is kept. */
   continueHref: string;
-  /** Faint photo that develops behind the title. Pass a small, optimized image. */
+  /** Faint photo that develops behind the title. Pass an optimized image. */
   backdropSrc?: string;
   /** Real API base URL for the keep flow; unset = mock clients. */
   apiUrl?: string;
@@ -60,8 +63,8 @@ type FirstMomentDialogProps = {
    * link reopens one dialog, not every "Start keeping" button.
    */
   handlesVerifyLink?: boolean;
-  /** keep (default): drop a moment, then sign up/in. sign-in: straight to email and code. */
-  mode?: OnboardingMode;
+  /** sign-up (default, "Start keeping"): the moment first, then email and code. sign-in: email and code. */
+  mode?: AuthMode;
   /** Extra classes for the trigger button (e.g. rounded-full in the header pill). */
   className?: string;
   label?: string;
@@ -74,7 +77,7 @@ export function FirstMomentDialog({
   backdropSrc,
   apiUrl,
   handlesVerifyLink = false,
-  mode = "keep",
+  mode = "sign-up",
   className,
   label = mode === "sign-in" ? "Sign in" : "Start keeping",
   tone = "ink",
@@ -119,7 +122,11 @@ export function FirstMomentDialog({
         <Dialog.Popup
           className={
             // Opacity and scale only: the content develops on its own; a popup-wide blur would double the paint cost.
-            "fixed top-1/2 left-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 has-[[data-slot=keep-flow][data-has-moment]]:max-w-3xl -translate-y-1/2 overflow-y-auto rounded-3xl bg-background p-6 text-foreground sm:p-10 transition-[opacity,scale] duration-500 ease-settle motion-reduce:transition-none data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0"
+            cn(
+              FRAME_WIDTH,
+              "fixed top-1/2 left-1/2 z-50 max-h-[calc(100dvh-2rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl bg-background text-foreground",
+              "transition-[opacity,scale] duration-500 ease-settle motion-reduce:transition-none data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0",
+            )
           }
         >
           <Dialog.Close

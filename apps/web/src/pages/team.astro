@@ -8,7 +8,7 @@ import { contactEmail, teamMembers } from "@/data/team.ts";
 import Base from "@/layouts/base.astro";
 ---
 
-<Base title="Team · Ámbar" description="Small moments deserve a place. Meet the person building Ámbar.">
+<Base title="Team · Ambar" description="Small moments deserve a place. Meet the person building Ambar.">
   <SiteHeader />
   <main class="mx-auto flex max-w-5xl flex-col gap-16 px-6 pt-16 pb-28 sm:pt-24">
     <section aria-labelledby="manifesto-title" class="flex flex-col gap-6">
@@ -19,12 +19,12 @@ import Base from "@/layouts/base.astro";
       <div class="flex max-w-2xl flex-col gap-4 text-lg leading-relaxed text-pretty text-muted-foreground">
         <p>A photo, a short clip, a link worth returning to. Everyday things that are easy to lose.</p>
         <p>
-          We’re building Ámbar to make keeping them simple, finding them again effortless, and sharing them a choice.
+          We’re building Ambar to make keeping them simple, finding them again effortless, and sharing them a choice.
         </p>
       </div>
     </section>
     <section aria-labelledby="members-title" class="flex flex-col gap-8">
-      <h2 id="members-title" class="text-center text-2xl tracking-tight sm:text-3xl">The person behind Ámbar</h2>
+      <h2 id="members-title" class="text-center text-2xl tracking-tight sm:text-3xl">The person behind Ambar</h2>
       <ul class="flex flex-wrap justify-center gap-8">
         {teamMembers.map((member) => <li class="w-full max-w-80"><TeamMemberCard {...member} /></li>)}
       </ul>

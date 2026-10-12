@@ -1,2 +1,4 @@
-/** API base URL for the keep flow. Unset today: the flow uses mock clients (code 123456, no emails). */
-export const apiUrl: string | undefined = import.meta.env.PUBLIC_API_URL;
+import { PUBLIC_API_URL } from "astro:env/client";
+
+/** API base URL for the keep flow (PUBLIC_API_URL). Unset: the flow uses the mock clients. */
+export const apiUrl = PUBLIC_API_URL;

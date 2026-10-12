@@ -13,11 +13,13 @@ type CodeInputProps = {
   invalid?: boolean;
   /** Read-only while the code is being checked; unlike disabled, it keeps focus for a retry. */
   busy?: boolean;
+  /** No more tries (the code was burned): nothing to type until a new code arrives. */
+  disabled?: boolean;
   /** Id of the element that explains an error, for aria-describedby. */
   describedBy?: string;
 };
 
-export function CodeInput({ value, onChange, onComplete, label, invalid = false, busy = false, describedBy }: CodeInputProps) {
+export function CodeInput({ value, onChange, onComplete, label, invalid = false, busy = false, disabled = false, describedBy }: CodeInputProps) {
   const id = useId();
   const [focused, setFocused] = useState(false);
   const cells = Array.from({ length: CODE_LENGTH }, (_, index) => value[index] ?? "");
@@ -45,6 +47,7 @@ export function CodeInput({ value, onChange, onComplete, label, invalid = false,
         aria-invalid={invalid || undefined}
         aria-describedby={describedBy}
         readOnly={busy}
+        disabled={disabled}
         aria-busy={busy || undefined}
         // oxlint-disable-next-line jsx-a11y/no-autofocus -- the code step exists only to type this code.
         autoFocus
@@ -53,7 +56,7 @@ export function CodeInput({ value, onChange, onComplete, label, invalid = false,
         pattern="\d*"
         maxLength={CODE_LENGTH}
         spellCheck={false}
-        className="absolute inset-0 z-10 w-full cursor-text bg-transparent text-transparent caret-transparent outline-hidden selection:bg-transparent"
+        className="absolute inset-0 z-10 w-full cursor-text bg-transparent disabled:cursor-not-allowed text-transparent caret-transparent outline-hidden selection:bg-transparent"
       />
       <div aria-hidden className="flex gap-2">
         {cells.map((digit, index) => (
@@ -67,6 +70,7 @@ export function CodeInput({ value, onChange, onComplete, label, invalid = false,
               focused && index === Math.min(value.length, CODE_LENGTH - 1) && "border-ring ring-2 ring-ring/40",
               invalid && "border-destructive",
               busy && "opacity-60",
+              disabled && "opacity-40",
             )}
           >
             {digit}

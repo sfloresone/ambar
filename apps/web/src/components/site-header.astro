@@ -3,6 +3,7 @@ import { FirstMomentDialog } from "@ambar/ui/components/first-moment-dialog";
 import { PILL_BRAND, PILL_HEADER, PILL_HEADER_WRAP, PILL_LINK } from "@ambar/ui/lib/layout";
 import { apiUrl } from "@/lib/api-url.ts";
 import { appUrl } from "@/lib/app-url.ts";
+import Wordmark from "@/components/wordmark.astro";
 
 const home = Astro.url.pathname === "/" ? "" : "/";
 
@@ -34,8 +35,8 @@ const links = [
         stroke-dashoffset="1"
         class="trace-on-scroll stroke-leaf"></rect>
     </svg>
-    <a href="/" class={PILL_BRAND}>
-      Ámbar
+    <a href="/" class:list={[PILL_BRAND, "inline-flex items-center"]}>
+      <Wordmark variant="color" size="header" />
     </a>
     <nav aria-label="Main" class="hidden gap-1 text-sm sm:flex">
       {

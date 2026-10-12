@@ -1,12 +1,10 @@
 ---
 import { getImage } from "astro:assets";
-import photo from "@/assets/moments/sky-through-leaves-1.jpeg";
 import clipPoster from "@/assets/moments/sky-through-leaves-2.jpeg";
 import { MomentDemo } from "@/components/moment-demo.tsx";
+import { skyPhoto } from "@/lib/onboarding.ts";
 
-// Resized WebP: the originals are ~500 KB each.
-const photoImage = await getImage({ src: photo, width: 920, format: "webp", quality: 72 });
-
+// Resized WebP: the original is ~500 KB. The photo is the one the onboarding uses (shared file).
 const clipImage = await getImage({ src: clipPoster, width: 920, format: "webp", quality: 72 });
 ---
 
@@ -17,5 +15,5 @@ const clipImage = await getImage({ src: clipPoster, width: 920, format: "webp", 
       Keep a moment and decide who sees it. Nothing leaves this page.
     </p>
   </div>
-  <MomentDemo client:visible photoSrc={photoImage.src} clipPosterSrc={clipImage.src} />
+  <MomentDemo client:visible photoSrc={skyPhoto} clipPosterSrc={clipImage.src} />
 </section>

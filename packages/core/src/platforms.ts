@@ -1,4 +1,4 @@
-/** Where Ámbar lives. One list for the landing's Platforms section and the app's "Get Ámbar" menu. */
+/** Where Ambar lives. One list for the landing's Platforms section and the app's "Get Ambar" menu. */
 
 export type PlatformId = "web" | "extension" | "mobile" | "desktop";
 

@@ -32,6 +32,16 @@ export const devSections: DevSection[] = [
     description: "Develop, Shutter and interactive amber, replayable.",
   },
   {
+    slug: "dither-sequence",
+    title: "Dither sequence",
+    description: "Twelve Paper photos, prepared treatments and a live shader with the Ambar palette.",
+  },
+  {
+    slug: "hero",
+    title: "Hero",
+    description: "A moment found, kept and waiting on another device. Two interactive visual treatments.",
+  },
+  {
     slug: "sign-in",
     title: "Sign-in flow",
     description: "Keep flow: drop, email, 6-digit code or link, keeping, kept. Mock clients.",

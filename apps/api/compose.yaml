@@ -1,0 +1,24 @@
+# Development database only. Production Postgres runs on the VPS (or a managed service).
+name: ambar-api
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: ambar
+      POSTGRES_PASSWORD: ambar
+      POSTGRES_DB: ambar
+    ports:
+      # Localhost only: never expose the dev database to the network.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      # Postgres 18 images keep data under /var/lib/postgresql/<major>/docker.
+      - postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ambar -d ambar"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  postgres:

@@ -1,0 +1,15 @@
+---
+import { apiUrl } from "@/lib/api-url.ts";
+import { appUrl } from "@/lib/app-url.ts";
+import { onboardingBackdrop } from "@/lib/onboarding.ts";
+import DevLayout from "../components/dev-layout.astro";
+import { HeroLab } from "../lab/hero.tsx";
+---
+
+<DevLayout title="Hero">
+  <p slot="lead" class="max-w-2xl text-muted-foreground">
+    A moment found, kept and waiting on another device. Compare a photographic reveal with a graphic
+    treatment in cloud, leaf and sky, without needing a finished product screen.
+  </p>
+  <HeroLab client:visible continueHref={appUrl} backdropSrc={onboardingBackdrop} apiUrl={apiUrl} />
+</DevLayout>

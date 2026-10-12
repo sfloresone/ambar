@@ -1,20 +1,21 @@
-import { FlowLogo } from "@ambar/ui/components/flow-logo";
-import { IRIS_ENTRY, useIrisExit } from "@ambar/ui/components/iris";
-import { KeepFlow } from "@ambar/ui/screens/keep-flow/keep-flow";
-import { useEffect, useState } from "react";
+import { AuthFlow } from "@ambar/ui/components/auth-flow";
+import { IRIS_ENTRY } from "@ambar/ui/components/iris";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 
-// Same flow and same ending as the landing: logo on top, email → code (or the email link), then the
-// iris closes onto the logo and opens on the moments (AppLayout opens it on the iris entry flag).
+import { apiUrl } from "../api-url.ts";
+import { useAppSession } from "../session.ts";
+
+// The same flow as the landing (sign in, or sign up with a link under the form), ending the same way:
+// the iris closes onto the logo and opens on the moments (AppLayout opens it on the iris entry flag).
 export function LoginRoute() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   // Read the email-link token once, then remove it from the URL so it doesn't linger in history.
   const [verifyToken] = useState(() => params.get("verify") ?? undefined);
-
-  const { logoRef, close, iris } = useIrisExit(() =>
-    navigate({ pathname: "/", search: `?${IRIS_ENTRY.param}=${IRIS_ENTRY.value}` }, { replace: true }),
-  );
+  const { refresh } = useAppSession();
+  // Started when the flow ends, so the read runs while the iris closes, not after.
+  const sessionRead = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     if (params.has("verify")) {
@@ -23,10 +24,23 @@ export function LoginRoute() {
   }, [params, setParams]);
 
   return (
-    <section className="mx-auto w-full max-w-4xl">
-      {iris}
-      <FlowLogo ref={logoRef} />
-      <KeepFlow apiUrl={import.meta.env.VITE_API_URL} verifyToken={verifyToken} onDone={close} />
+    <section className="overflow-hidden rounded-3xl border bg-card">
+      <AuthFlow
+        initialMode="sign-in"
+        apiUrl={apiUrl}
+        verifyToken={verifyToken}
+        // The email link comes back here, where a moment attached in this flow is saved.
+        returnTo={`${window.location.origin}/login`}
+        onSignedIn={() => {
+          sessionRead.current = refresh();
+        }}
+        onExit={() => {
+          // Fully shut and the header has the new session: open onto the moments.
+          void sessionRead.current.then(() =>
+            navigate({ pathname: "/", search: `?${IRIS_ENTRY.param}=${IRIS_ENTRY.value}` }, { replace: true }),
+          );
+        }}
+      />
     </section>
   );
 }
