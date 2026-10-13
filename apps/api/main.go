@@ -69,10 +69,14 @@ func run(ctx context.Context, getenv func(string) string) error {
 		return err
 	}
 
+	authService := auth.NewService(db, mailer, secret, appURL)
+
+	go cleanupLoop(ctx, authService)
+
 	handler := newRouter(&api{
 		logger:         logger,
 		db:             db,
-		auth:           auth.NewService(db, mailer, secret, appURL),
+		auth:           authService,
 		allowedOrigins: splitList(envOr(getenv, "ALLOWED_ORIGINS", "http://localhost:4321,http://localhost:5173")),
 		// Only "true" when the API is reachable solely through our reverse proxy (see realIP).
 		trustProxy:   getenv("TRUST_PROXY") == "true",
@@ -113,6 +117,27 @@ func run(ctx context.Context, getenv func(string) string) error {
 	logger.Info("api stopped cleanly")
 
 	return nil
+}
+
+// cleanupLoop runs auth cleanup once at start and then every auth.CleanupEvery until ctx ends.
+func cleanupLoop(ctx context.Context, service *auth.Service) {
+	ticker := time.NewTicker(auth.CleanupEvery)
+	defer ticker.Stop()
+
+	for {
+		challenges, sessions, err := service.Cleanup(ctx)
+		if err != nil {
+			slog.WarnContext(ctx, "auth cleanup failed", "err", err)
+		} else if challenges > 0 || sessions > 0 {
+			slog.InfoContext(ctx, "auth cleanup", "challenges", challenges, "sessions", sessions)
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+	}
 }
 
 // authSecret keys the sign-in code hashes. Development gets a random one per run (codes from a previous
