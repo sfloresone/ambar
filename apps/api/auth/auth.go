@@ -27,6 +27,8 @@ const (
 	// SessionTTL is renewed (sliding) at most once a day while the session is used.
 	SessionTTL     = 30 * 24 * time.Hour
 	sessionRefresh = 24 * time.Hour
+	// sessionMaxAge caps the sliding: after it, the device must sign in again, even if used daily.
+	sessionMaxAge = 90 * 24 * time.Hour
 )
 
 var (
@@ -83,11 +85,10 @@ type Pending struct {
 	ResendAfter time.Duration
 }
 
-// RequestEmail starts (or continues) a sign-in for email. next is where to go after verifying; returnTo
-// is the page the email link opens (where the flow started, so it finds what the user attached there),
+// RequestEmail starts (or continues) a sign-in for email. returnTo is the page the email link opens (where the flow started, so it finds what the user attached there),
 // already checked against the allowed origins by the caller; empty means the app's sign-in page.
 // The answer never reveals whether an account exists.
-func (s *Service) RequestEmail(ctx context.Context, email, next, returnTo string) (Pending, error) {
+func (s *Service) RequestEmail(ctx context.Context, email, returnTo string) (Pending, error) {
 	email = NormalizeEmail(email)
 	if !plausibleEmail.MatchString(email) {
 		return Pending{}, ErrInvalidEmail
@@ -109,7 +110,6 @@ func (s *Service) RequestEmail(ctx context.Context, email, next, returnTo string
 		email:     email,
 		codeHash:  hashCode(s.secret, tokenHash, code),
 		tokenHash: tokenHash,
-		next:      SafeNext(next),
 	})
 	if err != nil {
 		return Pending{}, err
@@ -160,47 +160,34 @@ func (s *Service) link(returnTo, token string) string {
 type Verified struct {
 	Session Session
 	Token   string
-	Next    string
 	Created bool
 }
 
 // VerifyCode signs in with the 6-digit code typed by the user.
 func (s *Service) VerifyCode(ctx context.Context, email, code, userAgent string) (Verified, error) {
-	email = NormalizeEmail(email)
-
-	challenge, err := s.store.checkCode(ctx, email, func(tokenHash, codeHash []byte) bool {
+	return s.signIn(ctx, checkCode(NormalizeEmail(email), func(tokenHash, codeHash []byte) bool {
 		return equalHash(hashCode(s.secret, tokenHash, code), codeHash)
-	})
-	if err != nil {
-		return Verified{}, err
-	}
-
-	return s.signIn(ctx, challenge, userAgent)
+	}), userAgent)
 }
 
 // VerifyLink signs in with the token from the email link (POSTed by the app's page, never by a GET:
 // mail scanners prefetch links).
 func (s *Service) VerifyLink(ctx context.Context, token, userAgent string) (Verified, error) {
-	challenge, err := s.store.consumeToken(ctx, hashToken(token))
-	if err != nil {
-		return Verified{}, err
-	}
-
-	return s.signIn(ctx, challenge, userAgent)
+	return s.signIn(ctx, consumeToken(hashToken(token)), userAgent)
 }
 
-func (s *Service) signIn(ctx context.Context, challenge consumed, userAgent string) (Verified, error) {
+func (s *Service) signIn(ctx context.Context, consume check, userAgent string) (Verified, error) {
 	token, err := newToken()
 	if err != nil {
 		return Verified{}, err
 	}
 
-	session, created, err := s.store.createSession(ctx, challenge.email, hashToken(token), userAgent)
+	session, created, err := s.store.signIn(ctx, consume, hashToken(token), userAgent)
 	if err != nil {
 		return Verified{}, err
 	}
 
-	return Verified{Session: session, Token: token, Next: challenge.next, Created: created}, nil
+	return Verified{Session: session, Token: token, Created: created}, nil
 }
 
 // Session is the live session for token, renewed if it is due. ErrNoSession when missing, expired or
@@ -237,13 +224,3 @@ func NormalizeEmail(email string) string {
 
 // Deliberately loose, like @ambar/core: receiving the email is the real check.
 var plausibleEmail = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
-
-// SafeNext keeps only same-site relative paths ("/settings"), so the redirect after sign-in can't send
-// anyone to another site ("//evil.com", "https://…", "/\evil.com").
-func SafeNext(next string) string {
-	if !strings.HasPrefix(next, "/") || strings.HasPrefix(next, "//") || strings.ContainsAny(next, "\\\r\n") {
-		return "/"
-	}
-
-	return next
-}
