@@ -14,6 +14,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -249,4 +250,28 @@ func randomSuffix() string {
 	_, _ = rand.Read(b)
 
 	return hex.EncodeToString(b)
+}
+
+func TestProductionCookieIsHostOnly(t *testing.T) {
+	a := &api{secureCookie: true}
+	rec := httptest.NewRecorder()
+	a.setSessionCookie(rec, "token", time.Now().Add(time.Hour))
+
+	cookie := rec.Result().Cookies()[0]
+	if cookie.Name != "__Host-ambar_session" || !cookie.Secure || !cookie.HttpOnly || cookie.Domain != "" || cookie.Path != "/" {
+		t.Fatalf("cookie: %+v", cookie)
+	}
+
+	r := httptest.NewRequest("GET", "/v1/auth/session", nil)
+	r.AddCookie(&http.Cookie{Name: sessionCookie, Value: "dev-cookie"})
+
+	if token, _ := a.sessionToken(r); token != "" {
+		t.Fatalf("production read the plain-http cookie: %q", token)
+	}
+
+	r.AddCookie(cookie)
+
+	if token, fromCookie := a.sessionToken(r); token != "token" || !fromCookie {
+		t.Fatalf("token: %q %v", token, fromCookie)
+	}
 }
