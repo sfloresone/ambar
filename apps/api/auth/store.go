@@ -238,3 +238,23 @@ func (s store) revokeSession(ctx context.Context, tokenHash []byte) error {
 
 	return err
 }
+
+// deleteExpired removes challenges past the per-address email window and sessions that expired or were
+// revoked a day ago or more. Recent challenges stay: maxEmailsPerHour counts them.
+func (s store) deleteExpired(ctx context.Context) (challenges, sessions int64, err error) {
+	tag, err := s.db.Exec(ctx, `DELETE FROM email_challenges WHERE created_at < now() - interval '1 day'`)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	challenges = tag.RowsAffected()
+
+	tag, err = s.db.Exec(ctx, `
+		DELETE FROM sessions
+		WHERE expires_at < now() - interval '1 day' OR revoked_at < now() - interval '1 day'`)
+	if err != nil {
+		return challenges, 0, err
+	}
+
+	return challenges, tag.RowsAffected(), nil
+}
