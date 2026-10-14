@@ -258,7 +258,7 @@ func TestProductionCookieIsHostOnly(t *testing.T) {
 	a.setSessionCookie(rec, "token", time.Now().Add(time.Hour))
 
 	cookie := rec.Result().Cookies()[0]
-	if cookie.Name != "__Host-ambar_session" || !cookie.Secure || !cookie.HttpOnly || cookie.Domain != "" || cookie.Path != "/" {
+	if cookie.Name != "__Host-session" || !cookie.Secure || !cookie.HttpOnly || cookie.Domain != "" || cookie.Path != "/" {
 		t.Fatalf("cookie: %+v", cookie)
 	}
 

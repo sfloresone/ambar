@@ -17,7 +17,7 @@ import (
 // The session cookie. In production it carries the __Host- prefix: browsers then only accept it
 // Secure, host-only (no Domain) and on Path=/, so no other subdomain can set or overwrite it.
 const (
-	sessionCookie       = "ambar_session"
+	sessionCookie       = "session"
 	secureSessionCookie = "__Host-" + sessionCookie
 )
 
