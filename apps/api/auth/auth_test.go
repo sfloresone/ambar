@@ -134,7 +134,7 @@ func TestSignUpThenSignInWithCode(t *testing.T) {
 	s, mailer, db := newTestService(t)
 	email := uniqueEmail()
 
-	pending, err := s.RequestEmail(ctx, "  "+strings.ToUpper(email)+" ", "/settings", "")
+	pending, err := s.RequestEmail(ctx, "  "+strings.ToUpper(email)+" ", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +153,7 @@ func TestSignUpThenSignInWithCode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if verified.Next != "/settings" || verified.Session.Email != email || verified.Token == "" || !verified.Created {
+	if verified.Session.Email != email || verified.Token == "" || !verified.Created {
 		t.Fatalf("verified: %+v", verified)
 	}
 
@@ -165,7 +165,7 @@ func TestSignUpThenSignInWithCode(t *testing.T) {
 	// Signing in again (another device): same user, a second, independent session.
 	age(t, db, email, time.Minute)
 
-	if _, err := s.RequestEmail(ctx, email, "", ""); err != nil {
+	if _, err := s.RequestEmail(ctx, email, ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -180,12 +180,12 @@ func TestRequestInsideCooldownSendsNothing(t *testing.T) {
 	s, mailer, _ := newTestService(t)
 	email := uniqueEmail()
 
-	first, err := s.RequestEmail(ctx, email, "", "")
+	first, err := s.RequestEmail(ctx, email, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	second, err := s.RequestEmail(ctx, email, "", "")
+	second, err := s.RequestEmail(ctx, email, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -202,7 +202,7 @@ func TestSimultaneousRequestsSendOneEmail(t *testing.T) {
 	var wg sync.WaitGroup
 	for range 5 {
 		wg.Go(func() {
-			if _, err := s.RequestEmail(context.Background(), email, "", ""); err != nil {
+			if _, err := s.RequestEmail(context.Background(), email, ""); err != nil {
 				t.Error(err)
 			}
 		})
@@ -220,14 +220,14 @@ func TestNewEmailRetiresTheOldOne(t *testing.T) {
 	s, mailer, db := newTestService(t)
 	email := uniqueEmail()
 
-	if _, err := s.RequestEmail(ctx, email, "", ""); err != nil {
+	if _, err := s.RequestEmail(ctx, email, ""); err != nil {
 		t.Fatal(err)
 	}
 
 	old := mailer.last(t)
 	age(t, db, email, time.Minute)
 
-	if _, err := s.RequestEmail(ctx, email, "", ""); err != nil {
+	if _, err := s.RequestEmail(ctx, email, ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -245,7 +245,7 @@ func TestWrongCodesBurnTheChallenge(t *testing.T) {
 	s, mailer, _ := newTestService(t)
 	email := uniqueEmail()
 
-	if _, err := s.RequestEmail(ctx, email, "", ""); err != nil {
+	if _, err := s.RequestEmail(ctx, email, ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -274,7 +274,7 @@ func TestExpiredChallenge(t *testing.T) {
 	s, mailer, db := newTestService(t)
 	email := uniqueEmail()
 
-	if _, err := s.RequestEmail(ctx, email, "", ""); err != nil {
+	if _, err := s.RequestEmail(ctx, email, ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -296,14 +296,14 @@ func TestLinkWorksOnceAndConsumesTheCode(t *testing.T) {
 	s, mailer, _ := newTestService(t)
 	email := uniqueEmail()
 
-	if _, err := s.RequestEmail(ctx, email, "//evil.example", ""); err != nil {
+	if _, err := s.RequestEmail(ctx, email, ""); err != nil {
 		t.Fatal(err)
 	}
 
 	sent := mailer.last(t)
 
 	verified, err := s.VerifyLink(ctx, sent.token(t), "phone")
-	if err != nil || verified.Session.Email != email || verified.Next != "/" {
+	if err != nil || verified.Session.Email != email {
 		t.Fatalf("link: %+v %v", verified, err)
 	}
 
@@ -322,14 +322,14 @@ func TestEmailsPerHourAreCapped(t *testing.T) {
 	email := uniqueEmail()
 
 	for i := range maxEmailsPerHour {
-		if _, err := s.RequestEmail(ctx, email, "", ""); err != nil {
+		if _, err := s.RequestEmail(ctx, email, ""); err != nil {
 			t.Fatalf("email %d: %v", i+1, err)
 		}
 
 		age(t, db, email, time.Minute)
 	}
 
-	_, err := s.RequestEmail(ctx, email, "", "")
+	_, err := s.RequestEmail(ctx, email, "")
 
 	var limited RateLimitedError
 	if !errors.As(err, &limited) || !errors.Is(err, ErrRateLimited) {
@@ -349,14 +349,14 @@ func TestProviderFailureKeepsNothing(t *testing.T) {
 
 	mailer.fail = errors.New("resend: 500")
 
-	if _, err := s.RequestEmail(ctx, email, "", ""); !errors.Is(err, ErrUnavailable) {
+	if _, err := s.RequestEmail(ctx, email, ""); !errors.Is(err, ErrUnavailable) {
 		t.Fatalf("got %v", err)
 	}
 
 	// No cooldown: the retry sends right away.
 	mailer.fail = nil
 
-	pending, err := s.RequestEmail(ctx, email, "", "")
+	pending, err := s.RequestEmail(ctx, email, "")
 	if err != nil || mailer.count() != 1 || pending.ResendAfter != resendCooldown {
 		t.Fatalf("retry: %+v %v (sent %d)", pending, err, mailer.count())
 	}
@@ -367,7 +367,7 @@ func TestSessionSlidesAndSignOutRevokes(t *testing.T) {
 	s, mailer, db := newTestService(t)
 	email := uniqueEmail()
 
-	if _, err := s.RequestEmail(ctx, email, "", ""); err != nil {
+	if _, err := s.RequestEmail(ctx, email, ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -401,29 +401,74 @@ func TestSessionSlidesAndSignOutRevokes(t *testing.T) {
 	}
 }
 
+func TestSessionStopsSlidingAtMaxAge(t *testing.T) {
+	ctx := context.Background()
+	s, mailer, db := newTestService(t)
+	email := uniqueEmail()
+
+	if _, err := s.RequestEmail(ctx, email, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	verified, err := s.VerifyCode(ctx, email, mailer.last(t).code, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Signed in 89 days ago and used daily: the renewal stops at day 90, not 30 days from now.
+	if _, err := db.Exec(ctx, `
+		UPDATE sessions
+		SET created_at = now() - interval '89 days', last_seen_at = now() - interval '2 days',
+		    expires_at = now() + interval '1 day'
+		WHERE user_id = $1`, verified.Session.UserID); err != nil {
+		t.Fatal(err)
+	}
+
+	session, err := s.Session(ctx, verified.Token)
+	if left := time.Until(session.ExpiresAt); err != nil || left > 24*time.Hour+time.Minute || left < 24*time.Hour-time.Minute {
+		t.Fatalf("capped: %+v %v", session, err)
+	}
+}
+
+// If opening the session fails, the sign-in rolls back whole: the link was not used up and still works.
+func TestFailedSessionKeepsTheChallenge(t *testing.T) {
+	ctx := context.Background()
+	s, mailer, _ := newTestService(t)
+	email := uniqueEmail()
+
+	if _, err := s.RequestEmail(ctx, email, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	first, err := s.VerifyCode(ctx, email, mailer.last(t).code, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	other := uniqueEmail()
+	if _, err := s.RequestEmail(ctx, other, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	link := hashToken(mailer.last(t).token(t))
+
+	// Reusing an existing session's token hash makes the session insert fail (unique token_hash).
+	if _, _, err := s.store.signIn(ctx, consumeToken(link), hashToken(first.Token), ""); err == nil {
+		t.Fatal("want the session insert to fail")
+	}
+
+	verified, err := s.VerifyLink(ctx, mailer.last(t).token(t), "")
+	if err != nil || verified.Session.Email != other || !verified.Created {
+		t.Fatalf("link after failed sign-in: %+v %v", verified, err)
+	}
+}
+
 func TestInvalidEmail(t *testing.T) {
 	s, _, _ := newTestService(t)
 
 	for _, email := range []string{"", "no-at", "a@b", "two words@example.com"} {
-		if _, err := s.RequestEmail(context.Background(), email, "", ""); !errors.Is(err, ErrInvalidEmail) {
+		if _, err := s.RequestEmail(context.Background(), email, ""); !errors.Is(err, ErrInvalidEmail) {
 			t.Errorf("%q: %v", email, err)
-		}
-	}
-}
-
-func TestSafeNext(t *testing.T) {
-	for in, want := range map[string]string{
-		"":                     "/",
-		"/":                    "/",
-		"/settings":            "/settings",
-		"/moments?tab=1":       "/moments?tab=1",
-		"//evil.example":       "/",
-		"https://evil.example": "/",
-		"/\\evil.example":      "/",
-		"settings":             "/",
-	} {
-		if got := SafeNext(in); got != want {
-			t.Errorf("SafeNext(%q) = %q, want %q", in, got, want)
 		}
 	}
 }
@@ -432,7 +477,7 @@ func TestLinkReturnsWhereTheFlowStarted(t *testing.T) {
 	ctx := context.Background()
 	s, mailer, _ := newTestService(t)
 
-	if _, err := s.RequestEmail(ctx, uniqueEmail(), "", "http://localhost:4321/?from=hero"); err != nil {
+	if _, err := s.RequestEmail(ctx, uniqueEmail(), "http://localhost:4321/?from=hero"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -449,7 +494,7 @@ func TestCleanupKeepsOnlyRecentRows(t *testing.T) {
 	userIDs := map[string]string{}
 
 	for _, email := range []string{old, recent} {
-		if _, err := s.RequestEmail(ctx, email, "", ""); err != nil {
+		if _, err := s.RequestEmail(ctx, email, ""); err != nil {
 			t.Fatal(err)
 		}
 
