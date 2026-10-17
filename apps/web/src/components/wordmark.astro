@@ -3,7 +3,7 @@ import { leaf } from "@ambar/ui/lib/mark-paths";
 
 type Props = {
   variant?: "color" | "ink" | "mono";
-  size?: "footer" | "header";
+  size?: "footer" | "header" | "banner";
   class?: string;
 };
 
@@ -36,7 +36,11 @@ const letters = [
     aria-hidden="true"
     class:list={[
       "flex items-end font-heading leading-none font-bold tracking-tight whitespace-nowrap",
-      size === "header" ? "text-xl" : "pt-[0.42em] text-[clamp(3rem,28cqw,14rem)]",
+      size === "header"
+        ? "text-xl"
+        : size === "banner"
+          ? "pt-[0.42em] text-[17cqw]"
+          : "pt-[0.42em] text-[clamp(3rem,28cqw,14rem)]",
     ]}
   >
     {
@@ -47,7 +51,10 @@ const letters = [
             <svg
               viewBox="0 0 56 96"
               aria-hidden="true"
-              class="pointer-events-none absolute bottom-[0.9em] left-[0.23em] h-[0.24em] w-auto origin-bottom rotate-[22deg] scale-x-[0.45]"
+              class:list={[
+                "pointer-events-none absolute left-[0.23em] h-[0.24em] w-auto origin-bottom rotate-[22deg] scale-x-[0.45]",
+                size === "banner" ? "bottom-[0.75em]" : "bottom-[0.9em]",
+              ]}
             >
               <path d={leaf} fill={accentFill} />
               <path

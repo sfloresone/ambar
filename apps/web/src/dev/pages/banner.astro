@@ -1,0 +1,43 @@
+---
+import sky from "@/assets/moments/sky-through-leaves-1.jpeg";
+import Mark from "@/components/mark.astro";
+import Wordmark from "@/components/wordmark.astro";
+import { BannerDownload } from "../components/banner-download.tsx";
+import DevLayout from "../components/dev-layout.astro";
+---
+
+<DevLayout title="Banner">
+  <p slot="lead" class="max-w-2xl text-muted-foreground">
+    A quiet Ambar banner for your portfolio. Download it as a 1600 × 600 PNG.
+  </p>
+
+  <section class="flex flex-col gap-5" aria-label="Ambar portfolio banner">
+    <figure class="w-full">
+      <div class="overflow-hidden rounded-2xl border border-border shadow-sm">
+        <div id="ambar-banner-artwork" class="@container relative aspect-[8/3] w-full overflow-hidden bg-cloud">
+          <img
+            src={sky.src}
+            alt=""
+            class="absolute inset-y-0 right-0 h-full w-[72%] object-cover object-[center_44%] [mask-image:radial-gradient(ellipse_95%_105%_at_100%_50%,#000_16%,transparent_100%)]"
+          />
+          <img
+            src={sky.src}
+            alt=""
+            class="absolute bottom-0 left-0 h-[69%] w-[43%] object-cover object-[70%_72%] opacity-70 [mask-image:radial-gradient(ellipse_105%_105%_at_0%_100%,#000_0%,transparent_95%)]"
+          />
+          <div class="absolute inset-0 bg-[radial-gradient(ellipse_57%_82%_at_50%_50%,white_35%,transparent_100%)]"></div>
+          <div class="absolute left-[3cqw] top-[2cqw]">
+            <Mark class="h-[7cqw] w-[7cqw]" />
+          </div>
+          <div class="absolute left-1/2 top-[44%] -translate-x-1/2 -translate-y-1/2">
+            <Wordmark size="banner" variant="color" />
+          </div>
+        </div>
+      </div>
+      <figcaption class="sr-only">
+        Ambar's mark at the top left and colorful wordmark in the center, with a softly faded photograph of tree branches and leaves in the other three corners.
+      </figcaption>
+    </figure>
+    <BannerDownload client:load targetId="ambar-banner-artwork" />
+  </section>
+</DevLayout>

@@ -17,6 +17,11 @@ export const devSections: DevSection[] = [
     description: "The amber mark, and the wordmark with the leaf as the accent, on cloud and on ink.",
   },
   {
+    slug: "banner",
+    title: "Banner",
+    description: "A portfolio banner with the Ambar mark, wordmark and onboarding photo, ready to download.",
+  },
+  {
     slug: "buttons",
     title: "Buttons",
     description: "Variants, sizes, icons and states, plus lab candidates.",
