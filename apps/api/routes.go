@@ -7,6 +7,7 @@ import (
 	"maps"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -83,27 +84,45 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	_ = json.NewEncoder(w).Encode(v)
 }
 
-// writeError is the one error shape: {"error": {"code", "message"}}. Codes match AuthErrorCode in
-// @ambar/core; messages are for people and never carry internal details.
-func writeError(w http.ResponseWriter, status int, code, message string) {
-	writeErrorWith(w, status, code, message, nil)
+// problemTypeBase prefixes the error code to form the problem "type" URI (RFC 9457).
+const problemTypeBase = "https://docs.ambar.page/errors/"
+
+// writeProblem is the one error shape: an RFC 9457 problem document (application/problem+json) with
+// a stable "code" and the request ID. Codes are listed in docs/reference/errors.md and match
+// AuthErrorCode in @ambar/core; detail is for people and never carries internal text.
+func writeProblem(w http.ResponseWriter, r *http.Request, status int, code, detail string) {
+	writeProblemWith(w, r, status, code, detail, nil)
 }
 
-// writeErrorWith adds machine-readable details to the error (e.g. attemptsLeft, retryAfterMs).
-func writeErrorWith(w http.ResponseWriter, status int, code, message string, details map[string]any) {
-	body := map[string]any{"code": code, "message": message}
-	maps.Copy(body, details)
+// writeProblemWith adds extension members to the problem (e.g. attemptsLeft, retryAfterMs).
+func writeProblemWith(w http.ResponseWriter, r *http.Request, status int, code, detail string, extensions map[string]any) {
+	body := map[string]any{
+		"type":      problemTypeBase + code,
+		"title":     problemTitle(code),
+		"status":    status,
+		"detail":    detail,
+		"code":      code,
+		"requestId": chimw.GetReqID(r.Context()),
+	}
+	maps.Copy(body, extensions)
 
-	writeJSON(w, status, map[string]any{"error": body})
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(body)
+}
+
+// problemTitle turns "invalid-code" into "Invalid code": one fixed title per code.
+func problemTitle(code string) string {
+	return strings.ToUpper(code[:1]) + strings.ReplaceAll(code[1:], "-", " ")
 }
 
 // rateLimit caps requests per client IP (IPv6 per /64, the block one user usually holds).
 func rateLimit(requests int, window time.Duration) func(http.Handler) http.Handler {
 	return httprate.LimitBy(requests, window, func(r *http.Request) (string, error) {
 		return httprate.CanonicalizeIP(clientIP(r)), nil
-	}, httprate.WithLimitHandler(func(w http.ResponseWriter, _ *http.Request) {
+	}, httprate.WithLimitHandler(func(w http.ResponseWriter, r *http.Request) {
 		// httprate has already set Retry-After (seconds); repeat it in the body for clients.
 		seconds, _ := strconv.Atoi(w.Header().Get("Retry-After"))
-		writeErrorWith(w, http.StatusTooManyRequests, "rate-limited", "Too many attempts. Try again in a little while.", map[string]any{"retryAfterMs": seconds * 1000})
+		writeProblemWith(w, r, http.StatusTooManyRequests, "rate-limited", "Too many attempts. Try again in a little while.", map[string]any{"retryAfterMs": seconds * 1000})
 	}))
 }

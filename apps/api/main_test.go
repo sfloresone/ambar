@@ -29,13 +29,13 @@ func (f fakeDB) Ping(context.Context) error { return f.err }
 const app = "http://localhost:5173"
 
 func newTestAPI(logs *bytes.Buffer, db pinger, service *auth.Service, trustProxy bool) http.Handler {
-	return newRouter(&api{
+	return withContract(newRouter(&api{
 		logger:         slog.New(slog.NewJSONHandler(logs, nil)),
 		db:             db,
 		auth:           service,
 		allowedOrigins: []string{app},
 		trustProxy:     trustProxy,
-	})
+	}))
 }
 
 func request(h http.Handler, method, path, remoteAddr string, headers map[string]string, body string) *httptest.ResponseRecorder {
@@ -70,7 +70,7 @@ func TestRequestLogUsesRoutePatternNotRawPath(t *testing.T) {
 
 	request(newTestAPI(&logs, fakeDB{}, nil, false), "GET", "/healthz?token=secret", "192.0.2.1:1", nil, "")
 
-	for _, want := range []string{`"msg":"request"`, `"route":"/healthz"`, `"status":200`, `"request_id":`, `"ip":"192.0.2.1"`} {
+	for _, want := range []string{`"msg":"request"`, `"http.request.method":"GET"`, `"http.route":"/healthz"`, `"http.response.status_code":200`, `"request_id":`, `"client.address":"192.0.2.1"`} {
 		if !strings.Contains(logs.String(), want) {
 			t.Errorf("log missing %s: %s", want, logs.String())
 		}

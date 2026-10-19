@@ -52,6 +52,8 @@ func (a *api) handleRequestEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	slog.InfoContext(r.Context(), "sign-in code requested", "event", "auth.code_requested")
+
 	writeJSON(w, http.StatusAccepted, map[string]any{
 		"email":         pending.Email,
 		"expiresAt":     pending.ExpiresAt,
@@ -90,7 +92,12 @@ func (a *api) handleVerifyEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	slog.InfoContext(r.Context(), "signed in", "user_id", verified.Session.UserID, "via_link", body.Token != "")
+	method := "code"
+	if body.Token != "" {
+		method = "link"
+	}
+
+	slog.InfoContext(r.Context(), "signed in", "event", "auth.signed_in", "user_id", verified.Session.UserID, "created", verified.Created, "method", method)
 
 	response := map[string]any{"session": toJSON(verified.Session), "created": verified.Created}
 
@@ -132,6 +139,8 @@ func (a *api) handleSignOut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	slog.InfoContext(r.Context(), "signed out", "event", "auth.signed_out")
+
 	a.setSessionCookie(w, "", time.Time{})
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -146,23 +155,24 @@ func (a *api) authError(w http.ResponseWriter, r *http.Request, err error) {
 
 	switch {
 	case errors.Is(err, auth.ErrInvalidEmail):
-		writeError(w, http.StatusBadRequest, "invalid-email", "That doesn't look like an email address.")
+		writeProblem(w, r, http.StatusBadRequest, "invalid-email", "That doesn't look like an email address.")
 	case errors.As(err, &invalid):
-		writeErrorWith(w, http.StatusBadRequest, "invalid-code", "That code didn't work.", map[string]any{"attemptsLeft": invalid.AttemptsLeft})
+		writeProblemWith(w, r, http.StatusBadRequest, "invalid-code", "That code didn't work.", map[string]any{"attemptsLeft": invalid.AttemptsLeft})
 	case errors.Is(err, auth.ErrTooManyAttempts):
-		writeError(w, http.StatusBadRequest, "too-many-attempts", "Too many wrong codes. Get a new one.")
+		writeProblem(w, r, http.StatusBadRequest, "too-many-attempts", "Too many wrong codes. Get a new one.")
 	case errors.Is(err, auth.ErrExpired):
-		writeError(w, http.StatusBadRequest, "expired-code", "That code or link has expired. Request a new one.")
+		writeProblem(w, r, http.StatusBadRequest, "expired-code", "That code or link has expired. Request a new one.")
 	case errors.As(err, &limited):
-		writeErrorWith(w, http.StatusTooManyRequests, "rate-limited", "Too many emails for this address.", map[string]any{"retryAfterMs": limited.RetryAfter.Milliseconds()})
+		writeProblemWith(w, r, http.StatusTooManyRequests, "rate-limited", "Too many emails for this address.", map[string]any{"retryAfterMs": limited.RetryAfter.Milliseconds()})
 	case errors.Is(err, auth.ErrNoSession):
-		writeError(w, http.StatusUnauthorized, "unauthorized", "You're not signed in.")
+		writeProblem(w, r, http.StatusUnauthorized, "unauthorized", "You're not signed in.")
 	case errors.Is(err, auth.ErrUnavailable):
-		slog.ErrorContext(r.Context(), "sign-in email not sent", "err", err)
-		writeError(w, http.StatusServiceUnavailable, "network", "We couldn't send the email. Try again in a moment.")
+		slog.ErrorContext(r.Context(), "sign-in email not sent", "event", "auth.email_failed", "err", err)
+		w.Header().Set("Retry-After", "30")
+		writeProblem(w, r, http.StatusServiceUnavailable, "network", "We couldn't send the email. Try again in a moment.")
 	default:
-		slog.ErrorContext(r.Context(), "auth", "err", err)
-		writeError(w, http.StatusInternalServerError, "internal", "Something went wrong on our side.")
+		slog.ErrorContext(r.Context(), "auth", "event", "auth.failed", "err", err)
+		writeProblem(w, r, http.StatusInternalServerError, "internal", "Something went wrong on our side.")
 	}
 }
 
@@ -235,7 +245,7 @@ func (a *api) sessionToken(r *http.Request) (token string, fromCookie bool) {
 // here: browsers must send a CORS preflight first, which other origins fail.
 func decodeJSON(w http.ResponseWriter, r *http.Request, v any) bool {
 	if mediaType, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type")); mediaType != "application/json" {
-		writeError(w, http.StatusUnsupportedMediaType, "bad-request", "Send JSON.")
+		writeProblem(w, r, http.StatusUnsupportedMediaType, "bad-request", "Send JSON.")
 
 		return false
 	}
@@ -244,7 +254,7 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, v any) bool {
 	decoder.DisallowUnknownFields()
 
 	if err := decoder.Decode(v); err != nil {
-		writeError(w, http.StatusBadRequest, "bad-request", "That request doesn't look right.")
+		writeProblem(w, r, http.StatusBadRequest, "bad-request", "That request doesn't look right.")
 
 		return false
 	}

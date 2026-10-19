@@ -10,5 +10,5 @@ apps/api/bin/
 .agents
 .cursor
 
-# Local concept documentation; keep untracked for now.
-/docs/
+# Personal notes next to the versioned docs.
+/docs/local/

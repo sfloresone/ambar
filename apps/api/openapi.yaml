@@ -1,0 +1,538 @@
+openapi: 3.1.0
+info:
+  title: Ambar API
+  version: 1.0.0
+  summary: Keep a moment and find it again on any device.
+  description: |
+    The HTTP API behind Ambar's web, extension, desktop and mobile apps.
+
+    Conventions:
+
+    - JSON in, JSON out. Members are `camelCase`; timestamps are RFC 3339 in UTC.
+    - Every error is an RFC 9457 problem document (`application/problem+json`) with a stable `code`.
+      The catalog is `docs/reference/errors.md`.
+    - Every response carries `X-Request-Id`. Quote it when reporting a problem.
+    - Routes under `/v1` are versioned by path and change only in compatible ways.
+    - Browser requests to `/v1` must come from an allowed `Origin` and are answered with `Cache-Control: no-store`.
+  contact:
+    name: Ambar
+    url: https://ambar.page
+    email: hello@ambar.page
+  license:
+    name: Proprietary
+    url: https://ambar.page
+servers:
+  - url: https://api.ambar.page
+    description: Production
+  - url: http://localhost:8080
+    description: Local development
+tags:
+  - name: health
+    description: Liveness of the API and its database.
+  - name: auth
+    description: |
+      Passwordless sign-in. The user asks for a code by email, then verifies the 6-digit code or the link token.
+      Asking never reveals whether an account exists; verifying returns `created` so the UI can greet accordingly.
+      Browsers receive the session as an httpOnly cookie; native clients ask for the token and send it as a bearer.
+paths:
+  /healthz:
+    get:
+      operationId: getHealth
+      tags: [health]
+      summary: Health check
+      description: Pings the database. Returns `200` when the API and the database are up, `503` when the database is unreachable.
+      security: []
+      responses:
+        "200":
+          description: The API and its database are up.
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/X-Request-Id"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+              example:
+                status: ok
+        "503":
+          description: The database is unreachable.
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/X-Request-Id"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+              example:
+                status: database unreachable
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/Internal"
+  /v1/auth/email:
+    post:
+      operationId: requestSignInCode
+      tags: [auth]
+      summary: Email a sign-in code
+      description: |
+        Sends a 6-digit code and a magic link to the address. The answer is the same whether or not the account exists.
+
+        One challenge per email: asking again within `resendAfterMs` sends nothing; asking later replaces the previous
+        code. Limited to 5 emails per hour per address (`rate-limited`) and 20 requests per hour per client.
+      security: []
+      requestBody:
+        description: The address to email, and optionally where the link should return.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CodeRequest"
+            example:
+              email: ana@example.com
+              returnTo: https://ambar.page/
+      responses:
+        "202":
+          description: The email is on its way (or was recently sent).
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/X-Request-Id"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PendingCode"
+              example:
+                email: ana@example.com
+                expiresAt: "2026-10-19T17:10:00Z"
+                resendAfterMs: 30000
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "415":
+          $ref: "#/components/responses/UnsupportedMediaType"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /v1/auth/email/verify:
+    post:
+      operationId: verifySignIn
+      tags: [auth]
+      summary: Verify a code or link and open a session
+      description: |
+        Exchanges the emailed code (with the email) or the link token for a session. Using either consumes both.
+        The first verified sign-in creates the account (`created: true`).
+
+        Browsers get the session as an httpOnly cookie. Native clients send `client: "native"` and receive the
+        token once in the body, to keep in the OS keychain and send as `Authorization: Bearer <token>`.
+
+        A code allows 5 wrong tries (`invalid-code` carries `attemptsLeft`), then dies (`too-many-attempts`).
+        Limited to 60 requests per hour per client.
+      security: []
+      requestBody:
+        description: The emailed code with its email, or the link token.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyRequest"
+            examples:
+              code:
+                summary: With the emailed code
+                value:
+                  email: ana@example.com
+                  code: "123456"
+              link:
+                summary: With the link token, from a native app
+                value:
+                  token: 7d1f…
+                  client: native
+      responses:
+        "200":
+          description: Signed in.
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/X-Request-Id"
+            Set-Cookie:
+              description: The session cookie (`__Host-session` in production). Only for web clients.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignedIn"
+              example:
+                session:
+                  userId: 1d9f3c5e-3b7a-4c8e-9f1a-2b3c4d5e6f70
+                  email: ana@example.com
+                  expiresAt: "2026-11-18T17:00:00Z"
+                created: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "415":
+          $ref: "#/components/responses/UnsupportedMediaType"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/Internal"
+  /v1/auth/session:
+    get:
+      operationId: getSession
+      tags: [auth]
+      summary: Current session
+      description: Returns the signed-in user. Web clients send the cookie; native clients send the bearer token. Renews the sliding expiry.
+      responses:
+        "200":
+          description: The current session.
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/X-Request-Id"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+              example:
+                session:
+                  userId: 1d9f3c5e-3b7a-4c8e-9f1a-2b3c4d5e6f70
+                  email: ana@example.com
+                  expiresAt: "2026-11-18T17:00:00Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/Internal"
+    delete:
+      operationId: signOut
+      tags: [auth]
+      summary: Sign out this device
+      description: Revokes the current session only. Other devices stay signed in.
+      responses:
+        "204":
+          description: Signed out. The cookie is cleared.
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/X-Request-Id"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/Internal"
+security:
+  - sessionCookie: []
+  - bearerToken: []
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-session
+      description: httpOnly session cookie set by `verifySignIn` for web clients (`session` on plain-http development).
+    bearerToken:
+      type: http
+      scheme: bearer
+      description: "The token returned once to native clients by `verifySignIn` with `client: \"native\"`."
+  headers:
+    X-Request-Id:
+      description: Server-generated request ID. The same value appears in the server logs and inside error bodies as `requestId`.
+      schema:
+        type: string
+        examples: ["ambar-api/Kf3n2m0001"]
+  schemas:
+    Health:
+      type: object
+      description: Result of the health check.
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, database unreachable]
+          examples: [ok]
+    CodeRequest:
+      type: object
+      description: Body of `requestSignInCode`.
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          description: Where to send the code.
+          examples: [ana@example.com]
+        returnTo:
+          type: string
+          format: uri
+          description: The page where the flow started; the emailed link returns there. Kept only when its origin is allowed.
+          examples: [https://ambar.page/]
+    VerifyRequest:
+      type: object
+      description: Either `email` + `code`, or `token` from the emailed link.
+      properties:
+        email:
+          type: string
+          format: email
+          description: The address the code was sent to.
+          examples: [ana@example.com]
+        code:
+          type: string
+          pattern: "^[0-9]{6}$"
+          description: The 6-digit code from the email.
+          examples: ["123456"]
+        token:
+          type: string
+          description: The token from the emailed link.
+          examples: [7d1f3a9c0b2e4f6a8d1c3e5f7a9b0c2d]
+        client:
+          type: string
+          enum: [web, native]
+          default: web
+          description: "`native` receives the session token in the body instead of a cookie."
+      oneOf:
+        - required: [email, code]
+        - required: [token]
+    PendingCode:
+      type: object
+      description: A code is on its way (or was sent moments ago).
+      required: [email, expiresAt, resendAfterMs]
+      properties:
+        email:
+          type: string
+          format: email
+          description: The normalized address the code was sent to.
+          examples: [ana@example.com]
+        expiresAt:
+          type: string
+          format: date-time
+          description: When the code and link stop working.
+          examples: ["2026-10-19T17:10:00Z"]
+        resendAfterMs:
+          type: integer
+          minimum: 0
+          description: Milliseconds before asking again sends a new email.
+          examples: [30000]
+    Session:
+      type: object
+      description: The signed-in user on this device.
+      required: [userId, email, expiresAt]
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: Stable, random user ID.
+          examples: [1d9f3c5e-3b7a-4c8e-9f1a-2b3c4d5e6f70]
+        email:
+          type: string
+          format: email
+          description: The user's email.
+          examples: [ana@example.com]
+        expiresAt:
+          type: string
+          format: date-time
+          description: Sliding expiry, renewed on use.
+          examples: ["2026-11-18T17:00:00Z"]
+    SessionResponse:
+      type: object
+      description: Body of `getSession`.
+      required: [session]
+      properties:
+        session:
+          $ref: "#/components/schemas/Session"
+    SignedIn:
+      type: object
+      description: Body of `verifySignIn`.
+      required: [session, created]
+      properties:
+        session:
+          $ref: "#/components/schemas/Session"
+        created:
+          type: boolean
+          description: "`true` when this sign-in created the account."
+          examples: [true]
+        token:
+          type: string
+          description: "The session token. Only for `client: \"native\"`, only once."
+          examples: [9f2c7e1b4a6d8f0c2e4a6c8e0b2d4f6a8c0e2a4c6e8a0c2e4a6c8e0a2c4e6a8c]
+    Problem:
+      type: object
+      description: RFC 9457 problem document. `code` is the stable identifier; see `docs/reference/errors.md`.
+      required: [type, title, status, detail, code, requestId]
+      properties:
+        type:
+          type: string
+          format: uri
+          description: "`https://docs.ambar.page/errors/<code>`."
+          examples: [https://docs.ambar.page/errors/invalid-code]
+        title:
+          type: string
+          description: Short, fixed name of the code.
+          examples: [Invalid code]
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+          description: The HTTP status, repeated from the response.
+          examples: [400]
+        detail:
+          type: string
+          description: A sentence for the end user. Safe to show as-is; never internal text.
+          examples: [That code didn't work.]
+        code:
+          type: string
+          description: Stable identifier clients switch on. Last segment of `type`.
+          examples: [invalid-code]
+          enum:
+            - bad-request
+            - invalid-email
+            - invalid-code
+            - too-many-attempts
+            - expired-code
+            - unauthorized
+            - forbidden
+            - rate-limited
+            - network
+            - internal
+        requestId:
+          type: string
+          description: Same as the `X-Request-Id` header.
+          examples: [ambar-api/Kf3n2m0001]
+        attemptsLeft:
+          type: integer
+          minimum: 0
+          description: With `invalid-code`, wrong codes the user can still try.
+          examples: [2]
+        retryAfterMs:
+          type: integer
+          minimum: 0
+          description: With `rate-limited`, milliseconds until the next attempt is allowed.
+          examples: [2530000]
+  responses:
+    BadRequest:
+      description: The body cannot be decoded (`bad-request`), the email is malformed (`invalid-email`), or the code is wrong (`invalid-code`), dead (`too-many-attempts`) or expired (`expired-code`).
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/X-Request-Id"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          example:
+            type: https://docs.ambar.page/errors/invalid-code
+            title: Invalid code
+            status: 400
+            detail: That code didn't work.
+            code: invalid-code
+            attemptsLeft: 2
+            requestId: ambar-api/Kf3n2m0001
+    Unauthorized:
+      description: No valid session (`unauthorized`).
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/X-Request-Id"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          example:
+            type: https://docs.ambar.page/errors/unauthorized
+            title: Unauthorized
+            status: 401
+            detail: You're not signed in.
+            code: unauthorized
+            requestId: ambar-api/Kf3n2m0001
+    Forbidden:
+      description: Browser request from an origin that is not allowed (`forbidden`).
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/X-Request-Id"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          example:
+            type: https://docs.ambar.page/errors/forbidden
+            title: Forbidden
+            status: 403
+            detail: Not allowed from this site.
+            code: forbidden
+            requestId: ambar-api/Kf3n2m0001
+    UnsupportedMediaType:
+      description: The body is not `application/json` (`bad-request`).
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/X-Request-Id"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          example:
+            type: https://docs.ambar.page/errors/bad-request
+            title: Bad request
+            status: 415
+            detail: Send JSON.
+            code: bad-request
+            requestId: ambar-api/Kf3n2m0001
+    TooManyRequests:
+      description: Too many requests from this client, or too many emails for this address (`rate-limited`). `retryAfterMs` and `Retry-After` say when to try again.
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/X-Request-Id"
+        Retry-After:
+          description: Seconds until the next attempt is allowed.
+          schema:
+            type: integer
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          example:
+            type: https://docs.ambar.page/errors/rate-limited
+            title: Rate limited
+            status: 429
+            detail: Too many emails for this address.
+            code: rate-limited
+            retryAfterMs: 2530000
+            requestId: ambar-api/Kf3n2m0001
+    ServiceUnavailable:
+      description: The sign-in email could not be sent (`network`). Nothing was stored; ask again after `Retry-After`.
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/X-Request-Id"
+        Retry-After:
+          description: Seconds until the next attempt is advised.
+          schema:
+            type: integer
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          example:
+            type: https://docs.ambar.page/errors/network
+            title: Network
+            status: 503
+            detail: We couldn't send the email. Try again in a moment.
+            code: network
+            requestId: ambar-api/Kf3n2m0001
+    Internal:
+      description: Unexpected server error (`internal`). The log line with the same `requestId` has the cause.
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/X-Request-Id"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          example:
+            type: https://docs.ambar.page/errors/internal
+            title: Internal
+            status: 500
+            detail: Something went wrong on our side.
+            code: internal
+            requestId: ambar-api/Kf3n2m0001

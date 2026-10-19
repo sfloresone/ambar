@@ -1,6 +1,6 @@
 // AuthClient over the Ambar API (apps/api, /v1/auth). Web: the session is an httpOnly cookie the
 // browser sends by itself (credentials: "include"); scripts never see the token.
-import { ApiErrorSchema, AuthError, CodeRequestSchema, SessionResponseSchema, SignedInSchema, type AuthClient, type AuthErrorCode } from "@ambar/core";
+import { ProblemSchema, AuthError, CodeRequestSchema, SessionResponseSchema, SignedInSchema, type AuthClient, type AuthErrorCode } from "@ambar/core";
 import * as v from "valibot";
 
 const AUTH_ERROR_CODES = ["invalid-email", "invalid-code", "too-many-attempts", "expired-code", "rate-limited", "network"] as const satisfies readonly AuthErrorCode[];
@@ -16,18 +16,18 @@ type AuthRequest = { email: string; returnTo?: string } | { email: string; code:
 
 /** The API's error as an AuthError. Unknown codes and unreadable bodies read as "network". */
 async function toAuthError(response: Response): Promise<AuthError> {
-  const parsed = v.safeParse(ApiErrorSchema, await response.json().catch(() => null));
+  const parsed = v.safeParse(ProblemSchema, await response.json().catch(() => null));
 
   if (!parsed.success) {
     return new AuthError("network", UNREACHABLE);
   }
 
-  const { error } = parsed.output;
-  const code = v.safeParse(AuthErrorCodeSchema, error.code);
+  const problem = parsed.output;
+  const code = v.safeParse(AuthErrorCodeSchema, problem.code);
 
-  return new AuthError(code.success ? code.output : "network", error.message, {
-    attemptsLeft: error.attemptsLeft,
-    retryAfterMs: error.retryAfterMs,
+  return new AuthError(code.success ? code.output : "network", problem.detail, {
+    attemptsLeft: problem.attemptsLeft,
+    retryAfterMs: problem.retryAfterMs,
   });
 }
 
