@@ -2,7 +2,7 @@
 // against these before the app uses it. Shared by every client (web, extension, desktop, mobile).
 import * as v from "valibot";
 
-import { PROVIDERS, type CodeRequest, type Session, type SignedIn } from "./auth.ts";
+import { PROVIDERS, type CodeRequest, type Identity, type Session, type SignedIn } from "./auth.ts";
 
 export const SessionSchema = v.object({
   userId: v.string(),
@@ -28,6 +28,17 @@ export const ProvidersSchema = v.object({
   providers: v.pipe(
     v.array(v.string()),
     v.transform((names) => PROVIDERS.filter((provider) => names.includes(provider))),
+  ),
+});
+
+/** GET /v1/auth/identities. */
+export const IdentitiesSchema = v.object({
+  identities: v.array(
+    v.object({
+      provider: v.picklist(PROVIDERS),
+      email: v.string(),
+      linkedAt: v.string(),
+    }) satisfies v.GenericSchema<Identity>,
   ),
 });
 

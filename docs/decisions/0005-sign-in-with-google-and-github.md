@@ -16,6 +16,7 @@ Email codes ([0004](0004-passwordless-auth-and-sessions.md)) work everywhere but
 - One budget of 10 seconds for the exchange and the identity calls, without retries: an authorization code works once.
 - The callback answers by redirecting back where the flow started (`returnTo`, allowed origins only): `?oauth=created|signed-in`, or `?error=<code>` (`oauth-cancelled`, `oauth-email`, `oauth-failed`); people never see JSON. Without a valid attempt there is no trusted `returnTo`, so `oauth-state` goes to `APP_URL/login`. A page that holds work in progress (the landing with a dropped moment) gets the person back to finish it.
 - `GET /v1/auth/providers` lists the configured providers, so clients only show buttons that work.
+- Settings manages them as sign-in methods: one account per provider (`UNIQUE (user_id, provider)`), connected through the same flow with `intent=link` (the callback links to the signed-in account; `oauth-taken` if it opens another one) and disconnected with `DELETE /v1/auth/identities/{provider}`. Email codes always work, so disconnecting never locks anyone out.
 - Web first. Native apps will use the same tables and service with a loopback or custom-scheme redirect (RFC 8252).
 
 ## Consequences

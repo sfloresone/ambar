@@ -251,6 +251,57 @@ paths:
           $ref: "#/components/responses/TooManyRequests"
         "500":
           $ref: "#/components/responses/Internal"
+  /v1/auth/identities:
+    get:
+      operationId: listIdentities
+      tags: [auth]
+      summary: Connected sign-in accounts
+      description: The Google and GitHub accounts that sign in to the current account, by provider. Shown in Settings as sign-in methods.
+      responses:
+        "200":
+          description: The connected accounts (may be empty).
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/X-Request-Id"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Identities"
+              example:
+                identities:
+                  - provider: github
+                    email: ana@example.com
+                    linkedAt: "2026-10-20T09:00:00Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/Internal"
+  /v1/auth/identities/{provider}:
+    delete:
+      operationId: disconnectIdentity
+      tags: [auth]
+      summary: Disconnect a sign-in account
+      description: Removes the account at that provider from the current account. Email codes keep working, so this never locks anyone out. Disconnecting one that isn't connected also answers `204`.
+      parameters:
+        - $ref: "#/components/parameters/Provider"
+      responses:
+        "204":
+          description: Disconnected.
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/X-Request-Id"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/Internal"
   /v1/auth/oauth/{provider}:
     get:
       operationId: startProviderSignIn
@@ -264,6 +315,13 @@ paths:
       security: []
       parameters:
         - $ref: "#/components/parameters/Provider"
+        - name: intent
+          in: query
+          required: false
+          description: "`link` connects the provider to the signed-in account (Settings) instead of signing in; the callback then answers `oauth=linked` or `error=oauth-taken`."
+          schema:
+            type: string
+            enum: [link]
         - name: returnTo
           in: query
           required: false
@@ -301,6 +359,8 @@ paths:
         Failures redirect to the same place with `error=<code>`: `oauth-cancelled` (the person declined),
         `oauth-email` (no verified email at the provider), `oauth-failed` (anything else; logged). A missing,
         expired or mismatched attempt has no trusted `returnTo` and goes to `<APP_URL>/login?error=oauth-state`.
+        With `intent=link` the provider account joins the signed-in account instead: `oauth=linked`, or
+        `error=oauth-taken` when it already opens another account (`oauth-failed` without a session).
         Limited to 60 requests per hour per client.
       security: []
       parameters:
@@ -484,6 +544,37 @@ components:
           type: string
           description: "The session token. Only for `client: \"native\"`, only once."
           examples: [9f2c7e1b4a6d8f0c2e4a6c8e0b2d4f6a8c0e2a4c6e8a0c2e4a6c8e0a2c4e6a8c]
+    Identities:
+      type: object
+      description: The provider accounts that sign in to the current account.
+      required: [identities]
+      properties:
+        identities:
+          type: array
+          description: One per provider, sorted by provider.
+          examples: [[{ provider: github, email: ana@example.com, linkedAt: "2026-10-20T09:00:00Z" }]]
+          items:
+            $ref: "#/components/schemas/Identity"
+    Identity:
+      type: object
+      description: A Google or GitHub account connected as a sign-in method.
+      required: [provider, email, linkedAt]
+      properties:
+        provider:
+          type: string
+          enum: [google, github]
+          description: The provider.
+          examples: [github]
+        email:
+          type: string
+          format: email
+          description: The verified address the account had when it was connected.
+          examples: [ana@example.com]
+        linkedAt:
+          type: string
+          format: date-time
+          description: When it was connected.
+          examples: ["2026-10-20T09:00:00Z"]
     Providers:
       type: object
       description: The sign-in providers configured on the server.

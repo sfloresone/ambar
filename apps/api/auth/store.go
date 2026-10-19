@@ -278,6 +278,53 @@ func (s store) signInIdentity(ctx context.Context, provider, subject, email stri
 	return session, created, err
 }
 
+func (s store) identities(ctx context.Context, userID string) ([]Identity, error) {
+	rows, err := s.db.Query(ctx, `
+		SELECT provider, email, created_at FROM user_identities WHERE user_id = $1 ORDER BY provider`, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (Identity, error) {
+		var identity Identity
+
+		err := row.Scan(&identity.Provider, &identity.Email, &identity.LinkedAt)
+
+		return identity, err
+	})
+}
+
+// linkIdentity inserts the identity; when either unique key already holds, it tells which case it is.
+func (s store) linkIdentity(ctx context.Context, userID, provider, subject, email string) error {
+	tag, err := s.db.Exec(ctx, `
+		INSERT INTO user_identities (user_id, provider, subject, email) VALUES ($1, $2, $3, $4)
+		ON CONFLICT DO NOTHING`, userID, provider, subject, email)
+	if err != nil || tag.RowsAffected() == 1 {
+		return err
+	}
+
+	var owner string
+
+	err = s.db.QueryRow(ctx, `SELECT user_id::text FROM user_identities WHERE provider = $1 AND subject = $2`, provider, subject).Scan(&owner)
+
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		return ErrProviderLinked
+	case err != nil:
+		return err
+	case owner != userID:
+		return ErrIdentityTaken
+	}
+
+	return nil
+}
+
+func (s store) unlinkIdentity(ctx context.Context, userID, provider string) error {
+	_, err := s.db.Exec(ctx, `DELETE FROM user_identities WHERE user_id = $1 AND provider = $2`, userID, provider)
+
+	return err
+}
+
 // session reads a live session and slides its expiry when a renewal is due, never past sessionMaxAge
 // from sign-in.
 func (s store) session(ctx context.Context, tokenHash []byte) (Session, error) {

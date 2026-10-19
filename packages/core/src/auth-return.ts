@@ -3,7 +3,12 @@
 // theirs), handed to the shared flow, then removed from the URL with AUTH_RETURN_PARAMS.
 import type { ProviderErrorCode } from "./auth.ts";
 
-export type AuthReturn = { kind: "verify"; token: string } | { kind: "provider"; created: boolean } | { kind: "error"; code: ProviderErrorCode };
+export type AuthReturn =
+  | { kind: "verify"; token: string }
+  | { kind: "provider"; created: boolean }
+  /** Settings → Connect finished: the provider account now signs in to this one. */
+  | { kind: "linked" }
+  | { kind: "error"; code: ProviderErrorCode };
 
 /** Every parameter readAuthReturn reads, to strip once read (one-time values never linger in history). */
 export const AUTH_RETURN_PARAMS = ["verify", "oauth", "error"] as const;
@@ -14,6 +19,7 @@ export const PROVIDER_ERROR_COPY = {
   "oauth-state": "That sign-in took too long or started in another tab. Try again.",
   "oauth-email": "That account has no verified email. Verify it there, or use your email here.",
   "oauth-failed": "We couldn't sign you in with that account. Try again, or use your email.",
+  "oauth-taken": "That account already opens another Ambar. Sign in with it to use it there.",
 } as const satisfies Record<ProviderErrorCode, string>;
 
 function isProviderError(code: string): code is ProviderErrorCode {
@@ -28,6 +34,10 @@ export function readAuthReturn(params: URLSearchParams): AuthReturn | null {
   }
 
   const result = params.get("oauth");
+
+  if (result === "linked") {
+    return { kind: "linked" };
+  }
 
   if (result === "created" || result === "signed-in") {
     return { kind: "provider", created: result === "created" };

@@ -100,7 +100,8 @@ export function FirstMomentDialog({
     const url = new URL(window.location.href);
     const found = readAuthReturn(url.searchParams);
 
-    if (found === null) {
+    // "linked" belongs to Settings (connecting a provider), not to a sign-in.
+    if (found === null || found.kind === "linked") {
       return;
     }
 

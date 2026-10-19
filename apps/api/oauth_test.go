@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -218,5 +219,69 @@ func TestOAuthSignIn(t *testing.T) {
 		if me.Code != http.StatusOK || !strings.Contains(me.Body.String(), f.email) {
 			t.Fatalf("session: %d %s", me.Code, me.Body.String())
 		}
+	}
+}
+
+// Settings → Connect over HTTP: the attempt carries the link intent, the callback links to the session.
+func TestOAuthConnectFromSettings(t *testing.T) {
+	pool := testPool(t)
+	f := newFakeGitHub(t)
+	f.email = "connect-" + randomSuffix() + "@example.com"
+	service := auth.NewService(pool, &captureMailer{}, []byte("test-secret-test-secret-test-secret"), app)
+	h := newOAuthAPI(t, service, map[string]*oauth.Provider{"github": f.provider()})
+
+	owner, err := service.SignInWithProvider(context.Background(), "google", "g-"+f.email, "owner-"+f.email, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	session := sessionCookie + "=" + owner.Token
+	settings := app + "/settings?entry=iris"
+
+	connect := func(withSession bool) string {
+		rec := request(h, "GET", "/v1/auth/oauth/github?intent=link&returnTo="+url.QueryEscape(settings), "192.0.2.30:1", nil, "")
+		consent, _ := url.Parse(rec.Header().Get("Location"))
+		f.challenge = consent.Query().Get("code_challenge")
+		cookie := rec.Result().Cookies()[0]
+
+		header := cookie.Name + "=" + cookie.Value
+		if withSession {
+			header += "; " + session
+		}
+
+		return callback(h, header, "code=good&state="+consent.Query().Get("state")).Header().Get("Location")
+	}
+
+	if got := connect(false); got != settings+"&error=oauth-failed" {
+		t.Fatalf("without a session: %s", got)
+	}
+
+	if got := connect(true); got != settings+"&oauth=linked" {
+		t.Fatalf("connect: %s", got)
+	}
+
+	list := request(h, "GET", "/v1/auth/identities", "192.0.2.30:1", map[string]string{"Cookie": session}, "")
+	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), `"provider":"github"`) || !strings.Contains(list.Body.String(), f.email) {
+		t.Fatalf("identities: %d %s", list.Code, list.Body.String())
+	}
+
+	// The same GitHub account can't join a second Ambar account.
+	other, err := service.SignInWithProvider(context.Background(), "google", "g2-"+f.email, "other-"+f.email, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	session = sessionCookie + "=" + other.Token
+	if got := connect(true); got != settings+"&error=oauth-taken" {
+		t.Fatalf("taken: %s", got)
+	}
+
+	session = sessionCookie + "=" + owner.Token
+	if rec := request(h, "DELETE", "/v1/auth/identities/github", "192.0.2.30:1", map[string]string{"Cookie": session, "Origin": app}, ""); rec.Code != http.StatusNoContent {
+		t.Fatalf("disconnect: %d %s", rec.Code, rec.Body.String())
+	}
+
+	if rec := request(h, "GET", "/v1/auth/identities", "192.0.2.30:1", nil, ""); rec.Code != http.StatusUnauthorized {
+		t.Fatalf("identities without a session: %d", rec.Code)
 	}
 }

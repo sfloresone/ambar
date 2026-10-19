@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"golang.org/x/oauth2"
 
+	"ambar/api/auth"
 	"ambar/api/oauth"
 )
 
@@ -34,7 +35,11 @@ const (
 	oauthState     = "oauth-state"
 	oauthEmail     = "oauth-email"
 	oauthFailed    = "oauth-failed"
+	oauthTaken     = "oauth-taken"
 )
+
+// An attempt either signs in or, from Settings, connects the provider to the signed-in account.
+const linkIntent = "link"
 
 // GET /v1/auth/oauth/{provider}?returnTo=… → 302 to the provider's consent page.
 func (a *api) handleOAuthStart(w http.ResponseWriter, r *http.Request) {
@@ -49,7 +54,12 @@ func (a *api) handleOAuthStart(w http.ResponseWriter, r *http.Request) {
 	state, verifier := oauth2.GenerateVerifier(), oauth2.GenerateVerifier()
 	returnTo := a.allowedReturnTo(r.URL.Query().Get("returnTo"))
 
-	a.setOAuthCookie(w, strings.Join([]string{provider.Name, state, verifier, base64.RawURLEncoding.EncodeToString([]byte(returnTo))}, "."), oauthTTL)
+	intent := "sign-in"
+	if r.URL.Query().Get("intent") == linkIntent {
+		intent = linkIntent
+	}
+
+	a.setOAuthCookie(w, strings.Join([]string{provider.Name, state, verifier, base64.RawURLEncoding.EncodeToString([]byte(returnTo)), intent}, "."), oauthTTL)
 	redirect(w, provider.AuthURL(state, verifier))
 }
 
@@ -93,6 +103,20 @@ func (a *api) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Connecting from Settings: the session must still be there (it travels with the provider's redirect).
+	var linkTo auth.Session
+
+	if attempt.intent == linkIntent {
+		token, _ := a.sessionToken(r)
+
+		var err error
+		if linkTo, err = a.auth.Session(r.Context(), token); err != nil {
+			a.oauthFailed(w, r, back, name, oauthFailed, err)
+
+			return
+		}
+	}
+
 	identity, err := provider.Identify(r.Context(), query.Get("code"), attempt.verifier)
 	if errors.Is(err, oauth.ErrNoVerifiedEmail) {
 		a.oauthFailed(w, r, back, name, oauthEmail, err)
@@ -102,6 +126,12 @@ func (a *api) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		a.oauthFailed(w, r, back, name, oauthFailed, err)
+
+		return
+	}
+
+	if attempt.intent == linkIntent {
+		a.linkIdentity(w, r, back, linkTo.UserID, identity)
 
 		return
 	}
@@ -124,6 +154,82 @@ func (a *api) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	redirect(w, withQuery(back, "oauth", result))
+}
+
+// linkIdentity finishes a Settings → Connect: the provider account joins the signed-in account.
+func (a *api) linkIdentity(w http.ResponseWriter, r *http.Request, back, userID string, identity oauth.Identity) {
+	err := a.auth.LinkIdentity(r.Context(), userID, identity.Provider, identity.Subject, identity.Email)
+
+	switch {
+	case errors.Is(err, auth.ErrIdentityTaken):
+		a.oauthFailed(w, r, back, identity.Provider, oauthTaken, err)
+	case err != nil:
+		a.oauthFailed(w, r, back, identity.Provider, oauthFailed, err)
+	default:
+		slog.InfoContext(r.Context(), "identity linked", "event", "auth.identity_linked", "user_id", userID, "provider", identity.Provider)
+		redirect(w, withQuery(back, "oauth", "linked"))
+	}
+}
+
+type identityJSON struct {
+	Provider string    `json:"provider"`
+	Email    string    `json:"email"`
+	LinkedAt time.Time `json:"linkedAt"`
+}
+
+// GET /v1/auth/identities → 200 {identities}: the provider accounts that sign in to this account.
+func (a *api) handleIdentities(w http.ResponseWriter, r *http.Request) {
+	session, ok := a.requireSession(w, r)
+	if !ok {
+		return
+	}
+
+	identities, err := a.auth.Identities(r.Context(), session.UserID)
+	if err != nil {
+		a.authError(w, r, err)
+
+		return
+	}
+
+	list := make([]identityJSON, 0, len(identities))
+	for _, identity := range identities {
+		list = append(list, identityJSON(identity))
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"identities": list})
+}
+
+// DELETE /v1/auth/identities/{provider} → 204. Email codes keep working, so this never locks anyone out.
+func (a *api) handleUnlinkIdentity(w http.ResponseWriter, r *http.Request) {
+	session, ok := a.requireSession(w, r)
+	if !ok {
+		return
+	}
+
+	provider := chi.URLParam(r, "provider")
+
+	if err := a.auth.UnlinkIdentity(r.Context(), session.UserID, provider); err != nil {
+		a.authError(w, r, err)
+
+		return
+	}
+
+	slog.InfoContext(r.Context(), "identity unlinked", "event", "auth.identity_unlinked", "user_id", session.UserID, "provider", provider)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// requireSession answers 401 when the request carries no live session.
+func (a *api) requireSession(w http.ResponseWriter, r *http.Request) (auth.Session, bool) {
+	token, _ := a.sessionToken(r)
+
+	session, err := a.auth.Session(r.Context(), token)
+	if err != nil {
+		a.authError(w, r, err)
+
+		return auth.Session{}, false
+	}
+
+	return session, true
 }
 
 // GET /v1/auth/providers → 200 {providers}: the sign-in providers configured here, so clients only show
@@ -170,7 +276,7 @@ func redirect(w http.ResponseWriter, location string) {
 	w.WriteHeader(http.StatusFound)
 }
 
-type oauthAttempt struct{ provider, state, verifier, returnTo string }
+type oauthAttempt struct{ provider, state, verifier, returnTo, intent string }
 
 func (a *api) readOAuthCookie(r *http.Request) (oauthAttempt, bool) {
 	cookie, err := r.Cookie(a.oauthCookieName())
@@ -179,7 +285,7 @@ func (a *api) readOAuthCookie(r *http.Request) (oauthAttempt, bool) {
 	}
 
 	parts := strings.Split(cookie.Value, ".")
-	if len(parts) != 4 || parts[1] == "" || parts[2] == "" {
+	if len(parts) != 5 || parts[1] == "" || parts[2] == "" {
 		return oauthAttempt{}, false
 	}
 
@@ -189,7 +295,7 @@ func (a *api) readOAuthCookie(r *http.Request) (oauthAttempt, bool) {
 	}
 
 	// Checked again: the cookie is ours (HttpOnly, __Host-), but the destination must never be anyone else's.
-	return oauthAttempt{provider: parts[0], state: parts[1], verifier: parts[2], returnTo: a.allowedReturnTo(string(returnTo))}, true
+	return oauthAttempt{provider: parts[0], state: parts[1], verifier: parts[2], returnTo: a.allowedReturnTo(string(returnTo)), intent: parts[4]}, true
 }
 
 // setOAuthCookie writes the attempt, or clears it with an empty value.

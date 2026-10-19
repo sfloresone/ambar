@@ -1,6 +1,6 @@
 // AuthClient over the Ambar API (apps/api, /v1/auth). Web: the session is an httpOnly cookie the
 // browser sends by itself (credentials: "include"); scripts never see the token.
-import { ProblemSchema, AuthError, CodeRequestSchema, ProvidersSchema, SessionResponseSchema, SignedInSchema, type AuthClient, type AuthErrorCode } from "@ambar/core";
+import { ProblemSchema, AuthError, CodeRequestSchema, IdentitiesSchema, ProvidersSchema, SessionResponseSchema, SignedInSchema, type AuthClient, type AuthErrorCode } from "@ambar/core";
 import * as v from "valibot";
 
 const AUTH_ERROR_CODES = ["invalid-email", "invalid-code", "too-many-attempts", "expired-code", "rate-limited", "network"] as const satisfies readonly AuthErrorCode[];
@@ -94,8 +94,24 @@ export function createHttpAuth(apiUrl: string): AuthClient {
         return [];
       }
     },
-    async startProviderSignIn(provider, { returnTo }) {
-      return `${base}/oauth/${provider}?${new URLSearchParams({ returnTo })}`;
+    async startProviderSignIn(provider, { returnTo, intent }) {
+      const query = new URLSearchParams({ returnTo });
+
+      if (intent !== undefined) {
+        query.set("intent", intent);
+      }
+
+      return `${base}/oauth/${provider}?${query}`;
+    },
+    async identities() {
+      return (await decode(await send("GET", "/identities"), IdentitiesSchema)).identities;
+    },
+    async disconnect(provider) {
+      const response = await send("DELETE", `/identities/${provider}`);
+
+      if (!response.ok) {
+        throw await toAuthError(response);
+      }
     },
   };
 }

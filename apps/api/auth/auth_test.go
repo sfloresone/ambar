@@ -605,3 +605,52 @@ func TestProviderJoinsEmailAccount(t *testing.T) {
 		t.Fatalf("join: %+v %v", byGoogle, err)
 	}
 }
+
+// Settings → Connect / Disconnect: one account per provider, never someone else's.
+func TestLinkAndUnlinkIdentity(t *testing.T) {
+	s, _, _ := newTestService(t)
+	ctx := context.Background()
+	email := uniqueEmail()
+
+	owner, err := s.SignInWithProvider(ctx, "google", "g-"+email, email, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	userID := owner.Session.UserID
+
+	if err := s.LinkIdentity(ctx, userID, "github", "gh-"+email, "Other@Example.com"); err != nil {
+		t.Fatalf("link: %v", err)
+	}
+
+	// Again: nothing changes.
+	if err := s.LinkIdentity(ctx, userID, "github", "gh-"+email, "other@example.com"); err != nil {
+		t.Fatalf("link twice: %v", err)
+	}
+
+	if err := s.LinkIdentity(ctx, userID, "github", "gh-second-"+email, "x@example.com"); !errors.Is(err, ErrProviderLinked) {
+		t.Fatalf("second GitHub: %v", err)
+	}
+
+	someone, err := s.SignInWithProvider(ctx, "google", "g2-"+email, uniqueEmail(), "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := s.LinkIdentity(ctx, someone.Session.UserID, "github", "gh-"+email, "other@example.com"); !errors.Is(err, ErrIdentityTaken) {
+		t.Fatalf("someone else's GitHub: %v", err)
+	}
+
+	identities, err := s.Identities(ctx, userID)
+	if err != nil || len(identities) != 2 || identities[0].Provider != "github" || identities[0].Email != "other@example.com" || identities[1].Provider != "google" {
+		t.Fatalf("identities: %+v %v", identities, err)
+	}
+
+	if err := s.UnlinkIdentity(ctx, userID, "github"); err != nil {
+		t.Fatal(err)
+	}
+
+	if identities, _ := s.Identities(ctx, userID); len(identities) != 1 {
+		t.Fatalf("after unlink: %+v", identities)
+	}
+}

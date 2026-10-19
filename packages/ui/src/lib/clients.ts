@@ -5,8 +5,10 @@ import {
   CODE_LENGTH,
   isValidEmail,
   momentKindOf,
+  IdentitiesSchema,
   normalizeEmail,
   PROVIDERS,
+  type Identity,
   type AuthClient,
   type CodeRequest,
   type Moment,
@@ -16,6 +18,8 @@ import {
   type UploadClient,
   type UploadProgress,
 } from "@ambar/core";
+
+import * as v from "valibot";
 
 import { createHttpAuth } from "./http-auth.ts";
 import { readItem, removeItem, writeItem } from "./storage.ts";
@@ -116,6 +120,23 @@ function emailFromMockToken(token: string): string | null {
   }
 }
 
+/** Provider accounts the mock has "connected" (Settings), kept like its session. */
+const MOCK_IDENTITIES_KEY = "ambar.mock-identities";
+
+function readMockIdentities(): Identity[] {
+  try {
+    const parsed = v.safeParse(IdentitiesSchema, { identities: JSON.parse(readItem(MOCK_IDENTITIES_KEY) ?? "[]") });
+
+    return parsed.success ? parsed.output.identities : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeMockIdentities(identities: Identity[]) {
+  writeItem(MOCK_IDENTITIES_KEY, JSON.stringify(identities));
+}
+
 function createMockAuth(): AuthClient {
   return {
     async requestCode(email): Promise<CodeRequest> {
@@ -177,13 +198,33 @@ function createMockAuth(): AuthClient {
     },
     // No provider to visit: sign in as a demo account of that provider and come straight back, so the whole
     // round trip (handoff, return, welcome) can be tried without an API.
-    async startProviderSignIn(provider, { returnTo }) {
-      const { created } = signInMock(`you@${provider}.example`);
+    async startProviderSignIn(provider, { returnTo, intent }) {
       const url = new URL(returnTo);
+      const email = `you@${provider}.example`;
+
+      // Signing in with a provider connects it too, as on the API.
+      writeMockIdentities([...readMockIdentities().filter((identity) => identity.provider !== provider), { provider, email, linkedAt: new Date().toISOString() }]);
+
+      if (intent === "link") {
+        url.searchParams.set("oauth", "linked");
+
+        return url.toString();
+      }
+
+      const { created } = signInMock(email);
 
       url.searchParams.set("oauth", created ? "created" : "signed-in");
 
       return url.toString();
+    },
+    async identities() {
+      await wait(MOCK_LATENCY_MS / 2);
+
+      return readMockIdentities();
+    },
+    async disconnect(provider) {
+      await wait(MOCK_LATENCY_MS);
+      writeMockIdentities(readMockIdentities().filter((identity) => identity.provider !== provider));
     },
   };
 }

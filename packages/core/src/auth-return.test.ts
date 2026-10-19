@@ -12,6 +12,7 @@ describe("readAuthReturn", () => {
   test("a provider sign-in", () => {
     expect(read("entry=iris&oauth=created")).toEqual({ kind: "provider", created: true });
     expect(read("oauth=signed-in")).toEqual({ kind: "provider", created: false });
+    expect(read("entry=iris&oauth=linked")).toEqual({ kind: "linked" });
   });
 
   test("a provider error, unknown codes as oauth-failed", () => {

@@ -21,7 +21,15 @@ export type Provider = "google" | "github";
 export const PROVIDERS = ["google", "github"] as const satisfies readonly Provider[];
 
 /** Errors a provider sign-in comes back with (?error=…), see docs/reference/errors.md. */
-export type ProviderErrorCode = "oauth-cancelled" | "oauth-state" | "oauth-email" | "oauth-failed";
+export type ProviderErrorCode = "oauth-cancelled" | "oauth-state" | "oauth-email" | "oauth-failed" | "oauth-taken";
+
+/** A provider account connected as a sign-in method (Settings). */
+export type Identity = {
+  provider: Provider;
+  /** The verified address it had when it was connected. */
+  email: string;
+  linkedAt: string;
+};
 
 /**
  * invalid-code: wrong code, more tries left. too-many-attempts: the code is burned, a new email is needed.
@@ -78,9 +86,14 @@ export interface AuthClient {
   /**
    * Where to send the browser to sign in with a provider, asked when the person chooses it. It comes back
    * to returnTo with the result (readAuthReturn). The caller navigates there (top-level: the provider's
-   * consent page can't be framed or fetched).
+   * consent page can't be framed or fetched). intent "link" connects it to the signed-in account instead
+   * (Settings), and comes back with ?oauth=linked.
    */
-  startProviderSignIn(provider: Provider, options: { returnTo: string }): Promise<string>;
+  startProviderSignIn(provider: Provider, options: { returnTo: string; intent?: "link" }): Promise<string>;
+  /** The provider accounts connected to the signed-in account. */
+  identities(): Promise<Identity[]>;
+  /** Removes one. Email codes keep working, so this never locks anyone out. */
+  disconnect(provider: Provider): Promise<void>;
 }
 
 export function normalizeEmail(email: string): string {

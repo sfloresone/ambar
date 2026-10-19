@@ -38,6 +38,7 @@ Google and GitHub sign-in happen in browser navigations, so their failures are n
 | `oauth-cancelled` | The person declined at the provider (`access_denied`) |
 | `oauth-state` | The attempt is missing, expired (10 minutes) or does not match: an old tab, another browser, or a forged request. Always sent to `<APP_URL>/login`: there is no trusted `returnTo` |
 | `oauth-email` | The provider has no verified email for the account (GitHub: unverified primary email) |
+| `oauth-taken` | Settings → Connect: that provider account already signs in to another Ambar account |
 | `oauth-failed` | Anything else: the provider is down, the code was rejected, or our client configuration is wrong. Logged as `auth.oauth_failed` |
 
 Rules for new codes:

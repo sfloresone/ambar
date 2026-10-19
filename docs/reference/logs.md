@@ -23,6 +23,8 @@ Handlers log significant events with `event` as a stable, dot-separated name. Gr
 | --- | --- | --- |
 | `auth.code_requested` | INFO | |
 | `auth.signed_in` | INFO | `user_id`, `created` (a new account), `method` (`code`, `link`, `google` or `github`) |
+| `auth.identity_linked` | INFO | `user_id`, `provider` (Settings → Connect) |
+| `auth.identity_unlinked` | INFO | `user_id`, `provider` (Settings → Disconnect) |
 | `auth.oauth_failed` | WARN, ERROR | `provider`, `reason` (the `error` the browser got), `err` (the provider's error code only, never its text). ERROR for `oauth-failed` |
 | `auth.signed_out` | INFO | |
 | `auth.email_failed` | ERROR | `err` (sign-in email not sent) |
