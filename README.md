@@ -4,6 +4,10 @@
 
 Monorepo managed **exclusively with Bun** (no npm, pnpm or yarn). Project rules live in [AGENTS.md](AGENTS.md).
 
+## Docs
+
+Internal documentation lives in [`docs/`](docs/README.md); the API contract is [`apps/api/openapi.yaml`](apps/api/openapi.yaml).
+
 ## Structure
 
 | Path                     | What it is                                                                 |
@@ -25,6 +29,10 @@ Upcoming apps: `apps/extension`, `apps/desktop`, `apps/mobile`. Packages are fla
 
 CI (`.github/workflows/ci.yml`) runs typecheck, lint, build and the tests (Go against Postgres) with these versions on every pull request and on pushes to `main`.
 
+## Docs
+
+Internal documentation lives in [`docs/`](docs/README.md); the API contract is [`apps/api/openapi.yaml`](apps/api/openapi.yaml).
+
 ## Commands
 
 ```sh
@@ -40,11 +48,19 @@ bun run --filter @ambar/api db:up   # dev Postgres for the API
 bun run test:api                     # go test -race against it
 ```
 
+## Docs
+
+Internal documentation lives in [`docs/`](docs/README.md); the API contract is [`apps/api/openapi.yaml`](apps/api/openapi.yaml).
+
 ## Website build information
 
 The footer shows the version from `apps/web/package.json` and, when available, the first seven
 characters of the build commit. Set `BUILD_COMMIT` in the build environment to supply the deployed
 revision; otherwise, the build reads it from Git. When no commit is available, only the version appears.
+
+## Docs
+
+Internal documentation lives in [`docs/`](docs/README.md); the API contract is [`apps/api/openapi.yaml`](apps/api/openapi.yaml).
 
 ## shadcn components
 
@@ -53,6 +69,10 @@ Add them from `apps/app`; they land in `packages/ui`:
 ```sh
 bunx --bun shadcn@latest add dialog -c apps/app
 ```
+
+## Docs
+
+Internal documentation lives in [`docs/`](docs/README.md); the API contract is [`apps/api/openapi.yaml`](apps/api/openapi.yaml).
 
 ## Styles
 

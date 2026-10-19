@@ -12,13 +12,16 @@ import (
 	chimw "github.com/go-chi/chi/v5/middleware"
 )
 
-// requestLogger writes one line per request. It logs the route pattern ("/v1/moments/{id}"), never
-// the raw path or query, so IDs, tokens and emails stay out of the logs.
+// requestLogger writes one line per request with OpenTelemetry attribute names (docs/reference/logs.md)
+// and returns the request ID as X-Request-Id so a client can quote it. It logs the route pattern
+// ("/v1/moments/{id}"), never the raw path or query, so IDs, tokens and emails stay out of the logs.
 func requestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
 			ww := chimw.NewWrapResponseWriter(w, r.ProtoMajor)
+			requestID := chimw.GetReqID(r.Context())
+			ww.Header().Set("X-Request-Id", requestID)
 
 			next.ServeHTTP(ww, r)
 
@@ -33,12 +36,12 @@ func requestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 			}
 
 			logger.Log(r.Context(), level, "request",
-				"request_id", chimw.GetReqID(r.Context()),
-				"method", r.Method,
-				"route", chi.RouteContext(r.Context()).RoutePattern(),
-				"status", status,
+				"request_id", requestID,
+				"http.request.method", r.Method,
+				"http.route", chi.RouteContext(r.Context()).RoutePattern(),
+				"http.response.status_code", status,
 				"duration_ms", time.Since(start).Milliseconds(),
-				"ip", clientIP(r),
+				"client.address", clientIP(r),
 			)
 		})
 	}
@@ -107,7 +110,7 @@ func originGuard(allowedOrigins []string) func(http.Handler) http.Handler {
 			changes := r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions
 
 			if changes && origin != "" && !slices.Contains(allowedOrigins, origin) {
-				writeError(w, http.StatusForbidden, "forbidden", "Not allowed from this site.")
+				writeProblem(w, r, http.StatusForbidden, "forbidden", "Not allowed from this site.")
 
 				return
 			}

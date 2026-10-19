@@ -16,7 +16,8 @@
     "build": "bun --filter './apps/*' build",
     "typecheck": "bun --filter '*' typecheck",
     "lint": "oxlint",
-    "lint:fix": "oxlint --fix"
+    "lint:fix": "oxlint --fix",
+    "lint:openapi": "bun --filter @ambar/api lint:openapi"
   },
   "devDependencies": {
     "@oxlint/plugins": "^1.86.0",

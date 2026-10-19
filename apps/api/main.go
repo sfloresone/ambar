@@ -131,7 +131,7 @@ func cleanupLoop(ctx context.Context, service *auth.Service) {
 		if err != nil {
 			slog.WarnContext(ctx, "auth cleanup failed", "err", err)
 		} else if challenges > 0 || sessions > 0 {
-			slog.InfoContext(ctx, "auth cleanup", "challenges", challenges, "sessions", sessions)
+			slog.InfoContext(ctx, "auth cleanup", "event", "auth.cleanup", "challenges", challenges, "sessions", sessions)
 		}
 
 		select {

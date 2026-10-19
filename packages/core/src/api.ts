@@ -23,12 +23,17 @@ export const SignedInSchema = v.object({
   created: v.boolean(),
 }) satisfies v.GenericSchema<SignedIn>;
 
-/** {"error": {"code", "message", …details}}: every API error. */
-export const ApiErrorSchema = v.object({
-  error: v.object({
-    code: v.string(),
-    message: v.string(),
-    attemptsLeft: v.optional(v.number()),
-    retryAfterMs: v.optional(v.number()),
-  }),
+/**
+ * Every API error is an RFC 9457 problem document (application/problem+json). `code` is the stable
+ * identifier clients switch on; `detail` is end-user copy; `requestId` matches the X-Request-Id header.
+ */
+export const ProblemSchema = v.object({
+  type: v.string(),
+  title: v.string(),
+  status: v.number(),
+  detail: v.string(),
+  code: v.string(),
+  requestId: v.optional(v.string()),
+  attemptsLeft: v.optional(v.number()),
+  retryAfterMs: v.optional(v.number()),
 });
