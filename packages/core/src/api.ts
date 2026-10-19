@@ -2,7 +2,7 @@
 // against these before the app uses it. Shared by every client (web, extension, desktop, mobile).
 import * as v from "valibot";
 
-import type { CodeRequest, Session, SignedIn } from "./auth.ts";
+import { PROVIDERS, type CodeRequest, type Session, type SignedIn } from "./auth.ts";
 
 export const SessionSchema = v.object({
   userId: v.string(),
@@ -22,6 +22,14 @@ export const SignedInSchema = v.object({
   session: SessionSchema,
   created: v.boolean(),
 }) satisfies v.GenericSchema<SignedIn>;
+
+/** GET /v1/auth/providers. Providers this client doesn't know yet are dropped, not an error. */
+export const ProvidersSchema = v.object({
+  providers: v.pipe(
+    v.array(v.string()),
+    v.transform((names) => PROVIDERS.filter((provider) => names.includes(provider))),
+  ),
+});
 
 /**
  * Every API error is an RFC 9457 problem document (application/problem+json). `code` is the stable

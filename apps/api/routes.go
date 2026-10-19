@@ -61,6 +61,7 @@ func newRouter(a *api) http.Handler {
 			r.Get("/session", a.handleGetSession)
 			r.Delete("/session", a.handleSignOut)
 			// Browser navigations, not fetches: the state cookie is the CSRF check (docs/decisions/0005).
+			r.Get("/providers", a.handleProviders)
 			r.With(rateLimit(60, time.Hour)).Get("/oauth/{provider}", a.handleOAuthStart)
 			r.With(rateLimit(60, time.Hour)).Get("/oauth/{provider}/callback", a.handleOAuthCallback)
 		})

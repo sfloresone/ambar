@@ -228,6 +228,29 @@ paths:
           $ref: "#/components/responses/TooManyRequests"
         "500":
           $ref: "#/components/responses/Internal"
+  /v1/auth/providers:
+    get:
+      operationId: listSignInProviders
+      tags: [auth]
+      summary: Sign-in providers
+      description: The providers configured on this server, sorted. Clients show a "Continue with …" button only for these.
+      security: []
+      responses:
+        "200":
+          description: The configured providers (may be empty).
+          headers:
+            X-Request-Id:
+              $ref: "#/components/headers/X-Request-Id"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Providers"
+              example:
+                providers: [github, google]
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/Internal"
   /v1/auth/oauth/{provider}:
     get:
       operationId: startProviderSignIn
@@ -272,11 +295,13 @@ paths:
         The redirect URI registered at the provider (`<API_URL>/v1/auth/oauth/{provider}/callback`). Checks `state`
         against the attempt's cookie, exchanges the code with the PKCE verifier and reads who signed in (Google's
         `sub`, GitHub's numeric id, and a verified email). A known identity signs in its account; a new one joins the
-        account with the same email or creates it. Sets the session cookie and redirects to `returnTo`.
+        account with the same email or creates it. Sets the session cookie and redirects to `returnTo` (default
+        `<APP_URL>/login`) with `oauth=created` or `oauth=signed-in` added to its query.
 
-        Failures also redirect, to `<APP_URL>/login?error=<code>`: `oauth-cancelled` (the person declined),
-        `oauth-state` (missing, expired or mismatched attempt), `oauth-email` (no verified email at the provider),
-        `oauth-failed` (anything else; logged). Limited to 60 requests per hour per client.
+        Failures redirect to the same place with `error=<code>`: `oauth-cancelled` (the person declined),
+        `oauth-email` (no verified email at the provider), `oauth-failed` (anything else; logged). A missing,
+        expired or mismatched attempt has no trusted `returnTo` and goes to `<APP_URL>/login?error=oauth-state`.
+        Limited to 60 requests per hour per client.
       security: []
       parameters:
         - $ref: "#/components/parameters/Provider"
@@ -300,7 +325,7 @@ paths:
             type: string
       responses:
         "302":
-          description: Signed in (session cookie set, `Location` is `returnTo`) or not (`Location` is the app's sign-in page with `?error=`).
+          description: "`returnTo` with `?oauth=created|signed-in` (session cookie set) or with `?error=oauth-…`."
           headers:
             Location:
               $ref: "#/components/headers/Location"
@@ -459,6 +484,18 @@ components:
           type: string
           description: "The session token. Only for `client: \"native\"`, only once."
           examples: [9f2c7e1b4a6d8f0c2e4a6c8e0b2d4f6a8c0e2a4c6e8a0c2e4a6c8e0a2c4e6a8c]
+    Providers:
+      type: object
+      description: The sign-in providers configured on the server.
+      required: [providers]
+      properties:
+        providers:
+          type: array
+          description: Configured providers, sorted. Empty when none is configured.
+          examples: [[github, google]]
+          items:
+            type: string
+            enum: [google, github]
     Problem:
       type: object
       description: RFC 9457 problem document. `code` is the stable identifier; see `docs/reference/errors.md`.

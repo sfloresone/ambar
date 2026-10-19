@@ -8,7 +8,7 @@
 //
 // Darkroom "develop": the sign-up title develops word by word, a faint photo develops behind it, and the
 // moment then develops on the card of the keep flow.
-import type { SignedIn } from "@ambar/core";
+import type { AuthReturn, SignedIn } from "@ambar/core";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Fragment, useRef, useState, type ComponentType, type ReactNode } from "react";
 
@@ -51,10 +51,12 @@ export type AuthFlowProps = {
   initialMode?: AuthMode;
   /** Real API base URL; unset = mock clients. */
   apiUrl?: string;
-  /** Token from the email link (?verify=…): skip the drop and finish signing in. */
-  verifyToken?: string;
+  /** What the browser came back with (the email link or a provider's answer): skip the drop and finish. */
+  authReturn?: AuthReturn;
   /** The page the email link should open: this one, so it finds the moment saved here. */
   returnTo?: string;
+  /** Where Google or GitHub send the browser back, with or without a moment in the flow. */
+  providerReturnTo?: (hasMoment: boolean) => string;
   /** Faint photo that develops behind the sign-up title. */
   backdropSrc?: string;
   /** Heading and description elements. The landing dialog passes Base UI's so the dialog stays named. */
@@ -66,7 +68,7 @@ export type AuthFlowProps = {
   onExit: () => void;
 };
 
-export function AuthFlow({ initialMode = "sign-up", apiUrl, verifyToken, returnTo, backdropSrc, Title, Description = DefaultDescription, onSignedIn, onExit }: AuthFlowProps) {
+export function AuthFlow({ initialMode = "sign-up", apiUrl, authReturn, returnTo, providerReturnTo, backdropSrc, Title, Description = DefaultDescription, onSignedIn, onExit }: AuthFlowProps) {
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [file, setFile] = useState<File | null>(null);
   const [skipped, setSkipped] = useState(false);
@@ -75,7 +77,7 @@ export function AuthFlow({ initialMode = "sign-up", apiUrl, verifyToken, returnT
   const reduceMotion = useReducedMotion() === true;
   // Signed in: the iris closes onto the logo of the flow, then the caller hands off to the app.
   const { logoRef, close, iris } = useIrisExit(onExit);
-  const dropping = mode === "sign-up" && file === null && !skipped && verifyToken === undefined;
+  const dropping = mode === "sign-up" && file === null && !skipped && authReturn === undefined;
 
   async function switchMode() {
     const next: AuthMode = mode === "sign-in" ? "sign-up" : "sign-in";
@@ -130,8 +132,9 @@ export function AuthFlow({ initialMode = "sign-up", apiUrl, verifyToken, returnT
                 mode={mode}
                 file={file}
                 apiUrl={apiUrl}
-                verifyToken={verifyToken}
+                authReturn={authReturn}
                 returnTo={returnTo}
+                providerReturnTo={providerReturnTo}
                 Title={Title}
                 emailFooter={modeSwitch}
                 onDone={(signedIn) => {

@@ -5,8 +5,10 @@ import (
 	"encoding/base64"
 	"errors"
 	"log/slog"
+	"maps"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -26,8 +28,7 @@ const (
 	oauthTTL = 10 * time.Minute
 )
 
-// Sign-in errors the callback sends the browser back with (APP_URL/login?error=…). Listed in
-// docs/reference/errors.md.
+// Sign-in errors the callback sends the browser back with (?error=…). Listed in docs/reference/errors.md.
 const (
 	oauthCancelled = "oauth-cancelled"
 	oauthState     = "oauth-state"
@@ -52,8 +53,8 @@ func (a *api) handleOAuthStart(w http.ResponseWriter, r *http.Request) {
 	redirect(w, provider.AuthURL(state, verifier))
 }
 
-// GET /v1/auth/oauth/{provider}/callback?code&state (or ?error) → 302 to returnTo signed in, or to the app's
-// sign-in page with ?error=.
+// GET /v1/auth/oauth/{provider}/callback?code&state (or ?error) → 302 to returnTo with ?oauth=created|signed-in,
+// or with ?error=oauth-… (the app's sign-in page when the attempt itself is missing or forged).
 func (a *api) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "provider")
 	query := r.URL.Query()
@@ -69,17 +70,24 @@ func (a *api) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Without a valid attempt there is no trusted returnTo: back to the app's sign-in page.
 	if !found || attempt.provider != name || subtle.ConstantTimeCompare([]byte(attempt.state), []byte(query.Get("state"))) != 1 {
-		a.oauthFailed(w, r, name, oauthState, errors.New("missing, expired or mismatched state"))
+		a.oauthFailed(w, r, a.appURL+"/login", name, oauthState, errors.New("missing, expired or mismatched state"))
 
 		return
 	}
 
+	// From here on the attempt is ours: every answer goes back where the flow started.
+	back := attempt.returnTo
+	if back == "" {
+		back = a.appURL + "/login"
+	}
+
 	if code := query.Get("error"); code != "" {
 		if err := oauth.AuthorizeError(code); err != nil {
-			a.oauthFailed(w, r, name, oauthFailed, err)
+			a.oauthFailed(w, r, back, name, oauthFailed, err)
 		} else {
-			a.redirectWithError(w, oauthCancelled)
+			redirect(w, withQuery(back, "error", oauthCancelled))
 		}
 
 		return
@@ -87,20 +95,20 @@ func (a *api) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 
 	identity, err := provider.Identify(r.Context(), query.Get("code"), attempt.verifier)
 	if errors.Is(err, oauth.ErrNoVerifiedEmail) {
-		a.oauthFailed(w, r, name, oauthEmail, err)
+		a.oauthFailed(w, r, back, name, oauthEmail, err)
 
 		return
 	}
 
 	if err != nil {
-		a.oauthFailed(w, r, name, oauthFailed, err)
+		a.oauthFailed(w, r, back, name, oauthFailed, err)
 
 		return
 	}
 
 	verified, err := a.auth.SignInWithProvider(r.Context(), identity.Provider, identity.Subject, identity.Email, r.UserAgent())
 	if err != nil {
-		a.oauthFailed(w, r, name, oauthFailed, err)
+		a.oauthFailed(w, r, back, name, oauthFailed, err)
 
 		return
 	}
@@ -109,17 +117,29 @@ func (a *api) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 
 	a.setSessionCookie(w, verified.Token, verified.Session.ExpiresAt)
 
-	destination := attempt.returnTo
-	if destination == "" {
-		destination = a.appURL + "/"
+	// The page continues the flow (e.g. keeps a moment dropped before leaving) and greets accordingly.
+	result := "signed-in"
+	if verified.Created {
+		result = "created"
 	}
 
-	redirect(w, destination)
+	redirect(w, withQuery(back, "oauth", result))
+}
+
+// GET /v1/auth/providers → 200 {providers}: the sign-in providers configured here, so clients only show
+// buttons that work.
+func (a *api) handleProviders(w http.ResponseWriter, _ *http.Request) {
+	names := slices.Sorted(maps.Keys(a.providers))
+	if names == nil {
+		names = []string{}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"providers": names})
 }
 
 // oauthFailed logs why (the error never carries tokens, codes or the provider's text) and sends the
 // browser back to sign in.
-func (a *api) oauthFailed(w http.ResponseWriter, r *http.Request, provider, code string, err error) {
+func (a *api) oauthFailed(w http.ResponseWriter, r *http.Request, back, provider, code string, err error) {
 	// The person's side (stale tab, no verified email) is a warning; the provider or our config, an error.
 	level := slog.LevelWarn
 	if code == oauthFailed {
@@ -127,11 +147,21 @@ func (a *api) oauthFailed(w http.ResponseWriter, r *http.Request, provider, code
 	}
 
 	slog.Log(r.Context(), level, "oauth sign-in failed", "event", "auth.oauth_failed", "provider", provider, "reason", code, "err", err)
-	a.redirectWithError(w, code)
+	redirect(w, withQuery(back, "error", code))
 }
 
-func (a *api) redirectWithError(w http.ResponseWriter, code string) {
-	redirect(w, a.appURL+"/login?error="+url.QueryEscape(code))
+// withQuery sets one query parameter on an absolute URL, keeping the others (e.g. entry=iris).
+func withQuery(raw, key, value string) string {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return raw
+	}
+
+	q := u.Query()
+	q.Set(key, value)
+	u.RawQuery = q.Encode()
+
+	return u.String()
 }
 
 // redirect is a bare 302: no HTML body (http.Redirect writes one), the browser only needs Location.

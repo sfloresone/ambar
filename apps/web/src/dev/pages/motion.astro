@@ -5,6 +5,7 @@ import { onboardingBackdrop } from "@/lib/onboarding.ts";
 import DevLayout from "../components/dev-layout.astro";
 import { ShutterDemo } from "../components/shutter-demo.tsx";
 import Specimen from "../components/specimen.astro";
+import { ProviderHandoffDemo } from "../components/provider-handoff-demo.tsx";
 
 const develop = [
   { at: "Hover", what: "Content and backdrop start downloading, so the click opens instantly." },
@@ -36,6 +37,10 @@ const shutter = [
         <li class="grid grid-cols-[5rem_1fr] gap-3"><span class="font-medium tabular-nums">{step.at}</span><span class="text-muted-foreground">{step.what}</span></li>
       ))}
     </ol>
+  </Specimen>
+
+  <Specimen title="Iris · provider handoff" description="@ambar/ui/components/provider-handoff. The iris closes onto the pressed button's logo; shut, the Ambar mark develops beside it and “Connecting to Google…” shows while the provider loads. Here it reopens after 1.5 s instead of leaving. Reduced motion: no iris, the button shows it is loading.">
+    <div class="rounded-2xl border p-6"><ProviderHandoffDemo client:load /></div>
   </Specimen>
 
   <Specimen title="Shutter" description="@ambar/ui/components/shutter. Pure CSS, no Motion.">

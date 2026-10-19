@@ -8,14 +8,16 @@ import { formatWait, useSecondsUntil } from "../../lib/countdown.ts";
 
 type EmailStepProps = {
   defaultEmail: string;
+  /** An error the flow came back with (e.g. a provider sign-in that failed), shown until the next try. */
+  initialError?: string;
   onSubmit: (email: string) => Promise<void>;
 };
 
-export function EmailStep({ defaultEmail, onSubmit }: EmailStepProps) {
+export function EmailStep({ defaultEmail, initialError = "", onSubmit }: EmailStepProps) {
   const inputId = useId();
   const errorId = useId();
   const [email, setEmail] = useState(defaultEmail);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(initialError);
   const [busy, setBusy] = useState(false);
   // Rate limited: sending is paused until then (epoch ms).
   const [pausedUntil, setPausedUntil] = useState(0);

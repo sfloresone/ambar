@@ -165,6 +165,21 @@ func TestOAuthWithoutDatabase(t *testing.T) {
 	// A verifier other than the one behind the challenge is refused by the provider (PKCE).
 	f.verified, f.challenge = true, "not-the-challenge"
 	want(callback(h, cookie, "code=good&state="+state), "oauth-failed")
+
+	// With a valid attempt, errors go back where the flow started, keeping its query.
+	cookie, state = start(t, h, f, app+"/login?entry=iris")
+	if rec := callback(h, cookie, "error=access_denied&state="+state); rec.Header().Get("Location") != app+"/login?entry=iris&error=oauth-cancelled" {
+		t.Fatalf("error to returnTo: %s", rec.Header().Get("Location"))
+	}
+
+	providers := request(h, "GET", "/v1/auth/providers", "192.0.2.21:1", nil, "")
+	if providers.Code != http.StatusOK || strings.TrimSpace(providers.Body.String()) != `{"providers":["github"]}` {
+		t.Fatalf("providers: %d %s", providers.Code, providers.Body.String())
+	}
+
+	if rec := request(newOAuthAPI(t, nil, nil), "GET", "/v1/auth/providers", "192.0.2.21:1", nil, ""); strings.TrimSpace(rec.Body.String()) != `{"providers":[]}` {
+		t.Fatalf("no providers: %s", rec.Body.String())
+	}
 }
 
 // The whole browser flow against Postgres: start → provider → callback → session cookie → returnTo.
@@ -174,10 +189,12 @@ func TestOAuthSignIn(t *testing.T) {
 	f.email = "oauth-" + randomSuffix() + "@example.com"
 	h := newOAuthAPI(t, auth.NewService(pool, &captureMailer{}, []byte("test-secret-test-secret-test-secret"), app), map[string]*oauth.Provider{"github": f.provider()})
 
-	for returnTo, want := range map[string]string{
-		app + "/collections":         app + "/collections",
-		"https://evil.example/phish": app + "/",
+	// The first sign-in creates the account, the next ones sign in to it; returnTo off our origins falls back.
+	for _, c := range []struct{ returnTo, want string }{
+		{app + "/login?entry=iris", app + "/login?entry=iris&oauth=created"},
+		{"https://evil.example/phish", app + "/login?oauth=signed-in"},
 	} {
+		returnTo, want := c.returnTo, c.want
 		cookie, state := start(t, h, f, returnTo)
 
 		rec := callback(h, cookie, "code=good&state="+state)

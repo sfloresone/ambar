@@ -23,7 +23,7 @@ const steps = [
 
   <Specimen title="From “Start keeping”" description="Exactly what the landing does. This dialog also handles the email link.">
     <div class="flex flex-col items-start gap-5 rounded-2xl border p-6">
-      <FirstMomentDialog client:load continueHref="#" backdropSrc={onboardingBackdrop} apiUrl={apiUrl} handlesVerifyLink size="md" label="Start keeping" />
+      <FirstMomentDialog client:load continueHref="#" backdropSrc={onboardingBackdrop} apiUrl={apiUrl} handlesAuthReturn size="md" label="Start keeping" />
     </div>
     <ol class="flex flex-col gap-2.5 rounded-2xl border p-6 text-sm">
       {steps.map((step) => (

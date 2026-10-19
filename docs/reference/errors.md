@@ -31,12 +31,12 @@ Every error response is an [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) pr
 
 ## Provider sign-in redirects
 
-Google and GitHub sign-in happen in browser navigations, so their failures are not problem documents: the callback redirects to `<APP_URL>/login?error=<code>`.
+Google and GitHub sign-in happen in browser navigations, so their failures are not problem documents: the callback redirects back to the attempt's `returnTo` (default `<APP_URL>/login`) with `error=<code>` added; success adds `oauth=created` or `oauth=signed-in` instead. Clients read both with `readAuthReturn` (`@ambar/core`) and show the copy in `PROVIDER_ERROR_COPY`.
 
 | `error` | When |
 | --- | --- |
 | `oauth-cancelled` | The person declined at the provider (`access_denied`) |
-| `oauth-state` | The attempt is missing, expired (10 minutes) or does not match: an old tab, another browser, or a forged request |
+| `oauth-state` | The attempt is missing, expired (10 minutes) or does not match: an old tab, another browser, or a forged request. Always sent to `<APP_URL>/login`: there is no trusted `returnTo` |
 | `oauth-email` | The provider has no verified email for the account (GitHub: unverified primary email) |
 | `oauth-failed` | Anything else: the provider is down, the code was rejected, or our client configuration is wrong. Logged as `auth.oauth_failed` |
 

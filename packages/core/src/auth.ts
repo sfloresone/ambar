@@ -15,11 +15,19 @@ export type CodeRequest = {
   resendAfterMs: number;
 };
 
+/** Accounts elsewhere that can sign in to Ambar. The API lists the ones it has configured. */
+export type Provider = "google" | "github";
+
+export const PROVIDERS = ["google", "github"] as const satisfies readonly Provider[];
+
+/** Errors a provider sign-in comes back with (?error=…), see docs/reference/errors.md. */
+export type ProviderErrorCode = "oauth-cancelled" | "oauth-state" | "oauth-email" | "oauth-failed";
+
 /**
  * invalid-code: wrong code, more tries left. too-many-attempts: the code is burned, a new email is needed.
- * expired-code: expired or already used. rate-limited: wait retryAfterMs.
+ * expired-code: expired or already used. rate-limited: wait retryAfterMs. oauth-*: a provider sign-in failed.
  */
-export type AuthErrorCode = "invalid-email" | "invalid-code" | "too-many-attempts" | "expired-code" | "rate-limited" | "network";
+export type AuthErrorCode = "invalid-email" | "invalid-code" | "too-many-attempts" | "expired-code" | "rate-limited" | "network" | ProviderErrorCode;
 
 /** What a client needs to guide the user after an error. */
 export type AuthErrorDetails = {
@@ -65,6 +73,14 @@ export interface AuthClient {
   verifyLink(token: string): Promise<SignedIn>;
   signOut(): Promise<void>;
   getSession(): Promise<Session | null>;
+  /** The providers that can sign in here; empty when none (or when the API can't be reached). */
+  providers(): Promise<Provider[]>;
+  /**
+   * Where to send the browser to sign in with a provider, asked when the person chooses it. It comes back
+   * to returnTo with the result (readAuthReturn). The caller navigates there (top-level: the provider's
+   * consent page can't be framed or fetched).
+   */
+  startProviderSignIn(provider: Provider, options: { returnTo: string }): Promise<string>;
 }
 
 export function normalizeEmail(email: string): string {

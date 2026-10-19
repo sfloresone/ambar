@@ -9,12 +9,26 @@ import {
 } from "@phosphor-icons/react";
 
 import { Button } from "@ambar/ui/components/button";
+import { PROVIDER_NAME, ProviderLogo } from "@ambar/ui/components/provider-logo";
 
 type ButtonShowcaseProps = {
-  group: "tones" | "sizes" | "icons" | "icon-only" | "states";
+  group: "tones" | "sizes" | "icons" | "icon-only" | "states" | "providers";
 };
 
 export function ButtonShowcase({ group }: ButtonShowcaseProps) {
+  if (group === "providers") {
+    return (
+      <>
+        {(["google", "github"] as const).map((provider) => (
+          <Button key={provider} tone="cloud" size="lg">
+            <ProviderLogo provider={provider} />
+            Continue with {PROVIDER_NAME[provider]}
+          </Button>
+        ))}
+      </>
+    );
+  }
+
   if (group === "tones") {
     return (
       <>

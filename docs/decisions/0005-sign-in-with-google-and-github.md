@@ -14,7 +14,8 @@ Email codes ([0004](0004-passwordless-auth-and-sessions.md)) work everywhere but
 - Who signed in: Google's `sub` and verified email from the OpenID Connect userinfo endpoint; GitHub's numeric `id` and its primary verified email (`user:email`). The access token comes straight from the provider's token endpoint over TLS, so there is no ID token to parse and no JWT library.
 - Same users and sessions as email sign-in. `user_identities` maps `(provider, subject)` to a user. A new identity joins the account with the same email when the provider says it is verified; an unverified email is refused. Provider tokens are not stored.
 - One budget of 10 seconds for the exchange and the identity calls, without retries: an authorization code works once.
-- Failures redirect to `APP_URL/login?error=<code>` (`oauth-cancelled`, `oauth-state`, `oauth-email`, `oauth-failed`); people never see JSON.
+- The callback answers by redirecting back where the flow started (`returnTo`, allowed origins only): `?oauth=created|signed-in`, or `?error=<code>` (`oauth-cancelled`, `oauth-email`, `oauth-failed`); people never see JSON. Without a valid attempt there is no trusted `returnTo`, so `oauth-state` goes to `APP_URL/login`. A page that holds work in progress (the landing with a dropped moment) gets the person back to finish it.
+- `GET /v1/auth/providers` lists the configured providers, so clients only show buttons that work.
 - Web first. Native apps will use the same tables and service with a loopback or custom-scheme redirect (RFC 8252).
 
 ## Consequences

@@ -6,6 +6,7 @@ import {
   isValidEmail,
   momentKindOf,
   normalizeEmail,
+  PROVIDERS,
   type AuthClient,
   type CodeRequest,
   type Moment,
@@ -170,6 +171,19 @@ function createMockAuth(): AuthClient {
     },
     async getSession() {
       return readSession();
+    },
+    async providers() {
+      return [...PROVIDERS];
+    },
+    // No provider to visit: sign in as a demo account of that provider and come straight back, so the whole
+    // round trip (handoff, return, welcome) can be tried without an API.
+    async startProviderSignIn(provider, { returnTo }) {
+      const { created } = signInMock(`you@${provider}.example`);
+      const url = new URL(returnTo);
+
+      url.searchParams.set("oauth", created ? "created" : "signed-in");
+
+      return url.toString();
     },
   };
 }
