@@ -29,7 +29,6 @@ function devGallery(): AstroIntegration {
 }
 
 export default defineConfig({
-  // TODO: final domain (ambar.page or ambar.one).
   site: "https://ambar.page",
   integrations: [react(), devGallery()],
   // Public by nature (bundled into the page): URLs only, never secrets. Validated at dev/build start.

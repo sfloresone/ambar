@@ -28,7 +28,6 @@ type api struct {
 	auth           *auth.Service
 	allowedOrigins []string
 	trustProxy     bool
-	cookieDomain   string
 	secureCookie   bool
 }
 
