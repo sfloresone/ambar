@@ -34,6 +34,8 @@ jobs:
 
     env:
       DATABASE_URL: postgres://ambar:ambar@localhost:5432/ambar?sslmode=disable
+      # Required by the landing build (astro.config env schema); any valid URL works in CI.
+      PUBLIC_APP_URL: http://localhost:5173
 
     steps:
       - uses: actions/checkout@v7
