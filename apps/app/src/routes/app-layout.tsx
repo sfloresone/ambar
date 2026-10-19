@@ -12,7 +12,7 @@ import { LibraryProvider } from "@ambar/ui/screens/library/library-context";
 import { useSearchShortcut } from "@ambar/ui/screens/library/search-palette";
 import { FoldersIcon, FrameCornersIcon, ImagesIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Link, NavLink, Outlet, useNavigate, useSearchParams } from "react-router";
+import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate, useSearchParams } from "react-router";
 
 import { apiUrl } from "../api-url.ts";
 import { MomentViewerHost } from "../moment-viewer-host.tsx";
@@ -31,6 +31,7 @@ export function AppLayout() {
   const [arrived, setArrived] = useState(arrivingThroughIris);
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const fullBleed = useFullBleed();
   // Steps aside while content is in use; on the Canvas it also hides when left alone.
   const { hidden, ref: header } = useAutoHide({ idleMs: fullBleed ? 2500 : undefined });
@@ -45,6 +46,16 @@ export function AppLayout() {
   async function signOutAndLeave() {
     await signOut();
     navigate("/login", { replace: true });
+  }
+
+  // Everything but /login is private: signed out lands on /login, and nothing renders while the session loads.
+  const onLogin = pathname === "/login";
+  let page: ReactNode = <Outlet context={{ session, refresh, signOut: signOutAndLeave } satisfies AppContext} />;
+
+  if (!onLogin && session === null) {
+    page = <Navigate to="/login" replace />;
+  } else if (!onLogin && session === undefined) {
+    page = null;
   }
 
   // The first route is rendered: swap the static cover for the Iris (identical first frame) and open it.
@@ -125,11 +136,11 @@ export function AppLayout() {
             </div>
           </header>
           <main className={cn(!fullBleed && APP_FRAME, "flex flex-1 flex-col [&_h1:focus]:outline-hidden", !fullBleed && "py-10 sm:py-14")}>
-            <Outlet context={{ session, refresh, signOut: signOutAndLeave } satisfies AppContext} />
+            {page}
           </main>
         </div>
         <MomentViewerHost />
-        <SearchHost open={searching} onOpenChange={setSearching} />
+        {session && <SearchHost open={searching} onOpenChange={setSearching} />}
         <Toaster />
       </LibraryProvider>
     </ToastProvider>
