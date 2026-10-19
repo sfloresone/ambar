@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: ambar
+          POSTGRES_PASSWORD: ambar
+          POSTGRES_DB: ambar
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ambar -d ambar"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+
+    env:
+      DATABASE_URL: postgres://ambar:ambar@localhost:5432/ambar?sslmode=disable
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # Astro 7 requires Node >= 22.12; its CLI runs on Node even when started through Bun.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: apps/api/go.mod
+          cache-dependency-path: apps/api/go.sum
+
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run lint
+      - run: bun run lint:openapi
+      - run: bun run build
+      - run: bun run --filter @ambar/core test
+      - run: bun run test:api

@@ -34,7 +34,7 @@ export default defineConfig({
   // Public by nature (bundled into the page): URLs only, never secrets. Validated at dev/build start.
   env: {
     schema: {
-      PUBLIC_APP_URL: envField.string({ context: "client", access: "public", url: true, default: "http://localhost:5173" }),
+      PUBLIC_APP_URL: envField.string({ context: "client", access: "public", url: true }),
       // Unset: the keep flow uses the mock clients (code 123456, no emails).
       PUBLIC_API_URL: envField.string({ context: "client", access: "public", url: true, optional: true }),
     },

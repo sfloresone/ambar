@@ -4,7 +4,7 @@ import * as v from "valibot";
 
 const EnvSchema = v.object({
   // Unset or empty: the sign-in flow uses the mock clients (code 123456, no emails).
-  VITE_API_URL: v.optional(v.union([v.literal(""), v.pipe(v.string(), v.url("VITE_API_URL must be a URL, e.g. http://localhost:8080"))])),
+  VITE_API_URL: v.optional(v.union([v.literal(""), v.pipe(v.string(), v.url("VITE_API_URL must be a URL"))])),
 });
 
 export type AppEnv = {
