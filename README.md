@@ -10,11 +10,20 @@ Monorepo managed **exclusively with Bun** (no npm, pnpm or yarn). Project rules 
 | ------------------------ | -------------------------------------------------------------------------- |
 | `apps/web`               | Public site. Astro 7 + React islands + Tailwind v4 + Motion.               |
 | `apps/app`               | Web app. Vite + React 19 + React Router + shadcn (Base UI, Maia style).    |
+| `apps/api`               | API. Go + chi + pgx + Postgres 18; deployed on its own VPS.                |
 | `packages/ui`            | `@ambar/ui`: shadcn components, shared screens and the only global CSS.    |
 | `packages/core`          | `@ambar/core`: UI-free logic and types (moments, auth, upload).            |
 | `tools/oxlint/anti-slop` | Vendored [anti-slop](https://github.com/dmmulroy/anti-slop) lint rules.    |
 
-Upcoming apps: `apps/api`, `apps/extension`, `apps/desktop`, `apps/mobile`. Packages are flat: no nested packages.
+Upcoming apps: `apps/extension`, `apps/desktop`, `apps/mobile`. Packages are flat: no nested packages.
+
+## Requirements
+
+- [Bun](https://bun.sh) 1.4 (the version pinned in `packageManager`).
+- [Node.js](https://nodejs.org) 22 (22.12 or newer). Astro 7 requires it, and its CLI runs on Node even when started through Bun.
+- For `apps/api`: [Go](https://go.dev) 1.27 and Docker for the development Postgres.
+
+CI (`.github/workflows/ci.yml`) runs typecheck, lint, build and the tests (Go against Postgres) with these versions on every pull request and on pushes to `main`.
 
 ## Commands
 
@@ -27,6 +36,8 @@ bun run build
 bun run typecheck
 bun run lint       # oxlint + anti-slop
 bun run lint:fix
+bun run --filter @ambar/api db:up   # dev Postgres for the API
+bun run test:api                     # go test -race against it
 ```
 
 ## Website build information
