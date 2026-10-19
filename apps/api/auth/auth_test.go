@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
 
 	"ambar/api/migrations"
 )
@@ -77,9 +78,12 @@ func testDB(t *testing.T) *pgxpool.Pool {
 		t.Skip("needs Postgres")
 	}
 
+	// The same .env.local as the API (never overriding a real variable); no URL lives in the code.
+	_ = godotenv.Load("../.env.local")
+
 	url := os.Getenv("DATABASE_URL")
 	if url == "" {
-		url = "postgres://ambar:ambar@localhost:5432/ambar?sslmode=disable"
+		t.Fatal("DATABASE_URL is not set: copy apps/api/.env.example to apps/api/.env.local, or run with -short")
 	}
 
 	pool, err := pgxpool.New(context.Background(), url)

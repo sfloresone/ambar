@@ -40,11 +40,14 @@ func run(ctx context.Context, getenv func(string) string) error {
 	logger := newLogger(getenv("LOG_FORMAT"))
 	slog.SetDefault(logger)
 
-	addr := envOr(getenv, "ADDR", "127.0.0.1:8080")
-	// Defaults to the compose.yaml database, so development needs no .env.
-	databaseURL := envOr(getenv, "DATABASE_URL", "postgres://ambar:ambar@localhost:5432/ambar?sslmode=disable")
+	// No defaults: addresses and credentials come only from the environment (.env.local in development).
+	env, err := requireEnv(getenv, "ADDR", "DATABASE_URL", "APP_URL", "ALLOWED_ORIGINS")
+	if err != nil {
+		return err
+	}
+
+	addr, databaseURL, appURL := env["ADDR"], env["DATABASE_URL"], env["APP_URL"]
 	// The app that receives the sign-in link. An https URL means production: every secret must be set.
-	appURL := envOr(getenv, "APP_URL", "http://localhost:5173")
 	production := strings.HasPrefix(appURL, "https://")
 
 	secret, err := authSecret(getenv("AUTH_SECRET"), production)
@@ -77,7 +80,7 @@ func run(ctx context.Context, getenv func(string) string) error {
 		logger:         logger,
 		db:             db,
 		auth:           authService,
-		allowedOrigins: splitList(envOr(getenv, "ALLOWED_ORIGINS", "http://localhost:4321,http://localhost:5173")),
+		allowedOrigins: splitList(env["ALLOWED_ORIGINS"]),
 		// Only "true" when the API is reachable solely through our reverse proxy (see realIP).
 		trustProxy:   getenv("TRUST_PROXY") == "true",
 		secureCookie: production,
@@ -180,12 +183,23 @@ func newLogger(format string) *slog.Logger {
 	return slog.New(slog.NewTextHandler(os.Stdout, nil))
 }
 
-func envOr(getenv func(string) string, key, fallback string) string {
-	if value := getenv(key); value != "" {
-		return value
+// requireEnv reads the variables that have no default, naming every missing one at once.
+func requireEnv(getenv func(string) string, keys ...string) (map[string]string, error) {
+	values := make(map[string]string, len(keys))
+
+	var missing []string
+
+	for _, key := range keys {
+		if values[key] = getenv(key); values[key] == "" {
+			missing = append(missing, key)
+		}
 	}
 
-	return fallback
+	if len(missing) > 0 {
+		return nil, fmt.Errorf("missing %s: copy .env.example to .env.local (development) or set them in the service environment", strings.Join(missing, ", "))
+	}
+
+	return values, nil
 }
 
 func splitList(value string) []string {
