@@ -14,7 +14,12 @@ import (
 	"ambar/api/auth"
 )
 
-const sessionCookie = "ambar_session"
+// The session cookie. In production it carries the __Host- prefix: browsers then only accept it
+// Secure, host-only (no Domain) and on Path=/, so no other subdomain can set or overwrite it.
+const (
+	sessionCookie       = "session"
+	secureSessionCookie = "__Host-" + sessionCookie
+)
 
 // The API only takes small JSON bodies (emails, codes, tokens).
 const maxBodyBytes = 8 << 10
@@ -29,19 +34,18 @@ func toJSON(s auth.Session) sessionJSON {
 	return sessionJSON{UserID: s.UserID, Email: s.Email, ExpiresAt: s.ExpiresAt}
 }
 
-// POST /v1/auth/email {email, next?, returnTo?} → 202 {email, expiresAt, resendAfterMs}
+// POST /v1/auth/email {email, returnTo?} → 202 {email, expiresAt, resendAfterMs}
 // returnTo is the page the email link opens (where the flow started); only allowed origins are kept.
 func (a *api) handleRequestEmail(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Email    string `json:"email"`
-		Next     string `json:"next"`
 		ReturnTo string `json:"returnTo"`
 	}
 	if !decodeJSON(w, r, &body) {
 		return
 	}
 
-	pending, err := a.auth.RequestEmail(r.Context(), body.Email, body.Next, a.allowedReturnTo(body.ReturnTo))
+	pending, err := a.auth.RequestEmail(r.Context(), body.Email, a.allowedReturnTo(body.ReturnTo))
 	if err != nil {
 		a.authError(w, r, err)
 
@@ -56,7 +60,7 @@ func (a *api) handleRequestEmail(w http.ResponseWriter, r *http.Request) {
 }
 
 // POST /v1/auth/email/verify {email, code} | {token}, client?: "web" | "native"
-// → 200 {session, next, token?}. Web gets the session as an httpOnly cookie; native apps get the token
+// → 200 {session, created, token?}. Web gets the session as an httpOnly cookie; native apps get the token
 // once, to keep in the OS keychain, and send it as "Authorization: Bearer".
 func (a *api) handleVerifyEmail(w http.ResponseWriter, r *http.Request) {
 	var body struct {
@@ -88,7 +92,7 @@ func (a *api) handleVerifyEmail(w http.ResponseWriter, r *http.Request) {
 
 	slog.InfoContext(r.Context(), "signed in", "user_id", verified.Session.UserID, "via_link", body.Token != "")
 
-	response := map[string]any{"session": toJSON(verified.Session), "next": verified.Next, "created": verified.Created}
+	response := map[string]any{"session": toJSON(verified.Session), "created": verified.Created}
 
 	if body.Client == "native" {
 		response["token"] = verified.Token
@@ -101,7 +105,7 @@ func (a *api) handleVerifyEmail(w http.ResponseWriter, r *http.Request) {
 
 // GET /v1/auth/session → 200 {session} | 401
 func (a *api) handleGetSession(w http.ResponseWriter, r *http.Request) {
-	token, fromCookie := sessionToken(r)
+	token, fromCookie := a.sessionToken(r)
 
 	session, err := a.auth.Session(r.Context(), token)
 	if err != nil {
@@ -120,7 +124,7 @@ func (a *api) handleGetSession(w http.ResponseWriter, r *http.Request) {
 
 // DELETE /v1/auth/session → 204. Only this device signs out.
 func (a *api) handleSignOut(w http.ResponseWriter, r *http.Request) {
-	token, _ := sessionToken(r)
+	token, _ := a.sessionToken(r)
 
 	if err := a.auth.SignOut(r.Context(), token); err != nil {
 		a.authError(w, r, err)
@@ -185,13 +189,13 @@ func (a *api) allowedReturnTo(returnTo string) string {
 }
 
 // setSessionCookie writes (or, with an empty token, clears) the session cookie. HttpOnly keeps it away
-// from scripts; SameSite=Lax keeps other sites from using it in requests that change anything.
+// from scripts; SameSite=Lax keeps other sites from using it in requests that change anything. It is
+// host-only (the API's host): landing, app and API are same-site, so every one of them still sends it.
 func (a *api) setSessionCookie(w http.ResponseWriter, token string, expires time.Time) {
 	cookie := &http.Cookie{
-		Name:     sessionCookie,
+		Name:     a.sessionCookieName(),
 		Value:    token,
 		Path:     "/",
-		Domain:   a.cookieDomain,
 		HttpOnly: true,
 		Secure:   a.secureCookie,
 		SameSite: http.SameSiteLaxMode,
@@ -205,13 +209,22 @@ func (a *api) setSessionCookie(w http.ResponseWriter, token string, expires time
 	http.SetCookie(w, cookie)
 }
 
+// sessionCookieName: __Host- needs Secure, which plain-http development can't set.
+func (a *api) sessionCookieName() string {
+	if a.secureCookie {
+		return secureSessionCookie
+	}
+
+	return sessionCookie
+}
+
 // sessionToken reads "Authorization: Bearer" (native apps) or the cookie (web).
-func sessionToken(r *http.Request) (token string, fromCookie bool) {
+func (a *api) sessionToken(r *http.Request) (token string, fromCookie bool) {
 	if bearer, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer "); ok {
 		return strings.TrimSpace(bearer), false
 	}
 
-	if cookie, err := r.Cookie(sessionCookie); err == nil {
+	if cookie, err := r.Cookie(a.sessionCookieName()); err == nil {
 		return cookie.Value, true
 	}
 

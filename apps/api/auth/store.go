@@ -20,7 +20,6 @@ type startChallenge struct {
 	email     string
 	codeHash  []byte
 	tokenHash []byte
-	next      string
 }
 
 type startResult struct {
@@ -82,10 +81,10 @@ func (s store) startChallenge(ctx context.Context, in startChallenge) (startResu
 		}
 
 		return tx.QueryRow(ctx, `
-			INSERT INTO email_challenges (email, code_hash, token_hash, next, expires_at)
-			VALUES ($1, $2, $3, $4, now() + make_interval(secs => $5))
+			INSERT INTO email_challenges (email, code_hash, token_hash, expires_at)
+			VALUES ($1, $2, $3, now() + make_interval(secs => $4))
 			RETURNING id::text, expires_at`,
-			in.email, in.codeHash, in.tokenHash, in.next, codeTTL.Seconds(),
+			in.email, in.codeHash, in.tokenHash, codeTTL.Seconds(),
 		).Scan(&result.id, &result.expiresAt)
 	})
 
@@ -98,46 +97,70 @@ func (s store) deleteChallenge(ctx context.Context, id string) error {
 	return err
 }
 
-type consumed struct {
-	email string
-	next  string
-}
+// check consumes a challenge inside the sign-in transaction and returns its email. outcome is a user
+// mistake (wrong code, expired) that is still committed; err is a failure that rolls everything back.
+type check func(ctx context.Context, tx pgx.Tx) (email string, outcome, err error)
 
-// checkCode tests a code against the newest live challenge for email: a match consumes it, a miss
-// counts an attempt and burns it at maxAttempts. The row is locked, so parallel guesses can't race.
-func (s store) checkCode(ctx context.Context, email string, matches func(tokenHash, codeHash []byte) bool) (consumed, error) {
+// signIn consumes a challenge and opens a session in one transaction: if creating the session fails,
+// the challenge is not used up and the same code or link still works.
+// created reports whether this call created the user (sign up).
+func (s store) signIn(ctx context.Context, consume check, tokenHash []byte, userAgent string) (Session, bool, error) {
 	var (
-		result  consumed
+		session Session
+		created bool
 		outcome error
 	)
 
 	err := pgx.BeginFunc(ctx, s.db, func(tx pgx.Tx) error {
+		email, failed, err := consume(ctx, tx)
+		if err != nil {
+			return err
+		}
+
+		if failed != nil {
+			outcome = failed
+
+			return nil
+		}
+
+		session, created, err = createSession(ctx, tx, email, tokenHash, userAgent)
+
+		return err
+	})
+	if err != nil {
+		return Session{}, false, err
+	}
+
+	return session, created, outcome
+}
+
+// checkCode tests a code against the newest live challenge for email: a match consumes it, a miss
+// counts an attempt and burns it at maxAttempts. The row is locked, so parallel guesses can't race.
+func checkCode(email string, matches func(tokenHash, codeHash []byte) bool) check {
+	return func(ctx context.Context, tx pgx.Tx) (string, error, error) {
 		var (
 			id                  string
 			tokenHash, codeHash []byte
 		)
 
 		err := tx.QueryRow(ctx, `
-			SELECT id::text, token_hash, code_hash, next
+			SELECT id::text, token_hash, code_hash
 			FROM email_challenges
 			WHERE email = $1 AND consumed_at IS NULL AND expires_at > now()
 			ORDER BY created_at DESC LIMIT 1
-			FOR UPDATE`, email).Scan(&id, &tokenHash, &codeHash, &result.next)
+			FOR UPDATE`, email).Scan(&id, &tokenHash, &codeHash)
 		if errors.Is(err, pgx.ErrNoRows) {
-			outcome = ErrExpired
-
-			return nil
+			return "", ErrExpired, nil
 		}
 
 		if err != nil {
-			return err
+			return "", nil, err
 		}
 
 		if matches(tokenHash, codeHash) {
-			result.email = email
 			_, err := tx.Exec(ctx, `UPDATE email_challenges SET consumed_at = now() WHERE id = $1`, id)
 
-			return err
+			return email, nil, err
 		}
 
 		// A miss is committed too: the attempt must count.
@@ -148,63 +171,58 @@ func (s store) checkCode(ctx context.Context, email string, matches func(tokenHa
 			    consumed_at = CASE WHEN attempts + 1 >= $2 THEN now() END
 			WHERE id = $1
 			RETURNING attempts`, id, maxAttempts).Scan(&attempts); err != nil {
-			return err
+			return "", nil, err
 		}
 
-		outcome = InvalidCodeError{AttemptsLeft: maxAttempts - attempts}
 		if attempts >= maxAttempts {
-			outcome = ErrTooManyAttempts
+			return "", ErrTooManyAttempts, nil
 		}
 
-		return nil
-	})
-	if err != nil {
-		return consumed{}, err
+		return "", InvalidCodeError{AttemptsLeft: maxAttempts - attempts}, nil
 	}
-
-	return result, outcome
 }
 
-// consumeToken uses the link token once, atomically.
-func (s store) consumeToken(ctx context.Context, tokenHash []byte) (consumed, error) {
-	var result consumed
+// consumeToken uses the link token once.
+func consumeToken(tokenHash []byte) check {
+	return func(ctx context.Context, tx pgx.Tx) (string, error, error) {
+		var email string
 
-	err := s.db.QueryRow(ctx, `
-		UPDATE email_challenges SET consumed_at = now()
-		WHERE token_hash = $1 AND consumed_at IS NULL AND expires_at > now()
-		RETURNING email, next`, tokenHash).Scan(&result.email, &result.next)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return consumed{}, ErrExpired
+		err := tx.QueryRow(ctx, `
+			UPDATE email_challenges SET consumed_at = now()
+			WHERE token_hash = $1 AND consumed_at IS NULL AND expires_at > now()
+			RETURNING email`, tokenHash).Scan(&email)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", ErrExpired, nil
+		}
+
+		return email, nil, err
 	}
-
-	return result, err
 }
 
 // createSession finds or creates the user (verifying their email) and opens a session for this device.
-// created reports whether this call created the user (xmax = 0: the row was inserted, not updated).
-func (s store) createSession(ctx context.Context, email string, tokenHash []byte, userAgent string) (Session, bool, error) {
+// created: xmax = 0 means the user row was inserted, not updated.
+func createSession(ctx context.Context, tx pgx.Tx, email string, tokenHash []byte, userAgent string) (Session, bool, error) {
 	session := Session{Email: email}
 
 	var created bool
 
-	err := pgx.BeginFunc(ctx, s.db, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(ctx, `
-			INSERT INTO users (email, email_verified_at) VALUES ($1, now())
-			ON CONFLICT (email) DO UPDATE SET email_verified_at = coalesce(users.email_verified_at, now())
-			RETURNING id::text, (xmax = 0)`, email).Scan(&session.UserID, &created); err != nil {
-			return fmt.Errorf("upsert user: %w", err)
-		}
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO users (email, email_verified_at) VALUES ($1, now())
+		ON CONFLICT (email) DO UPDATE SET email_verified_at = coalesce(users.email_verified_at, now())
+		RETURNING id::text, (xmax = 0)`, email).Scan(&session.UserID, &created); err != nil {
+		return Session{}, false, fmt.Errorf("upsert user: %w", err)
+	}
 
-		return tx.QueryRow(ctx, `
-			INSERT INTO sessions (token_hash, user_id, user_agent, expires_at)
-			VALUES ($1, $2, left($3, 256), now() + make_interval(secs => $4))
-			RETURNING expires_at`, tokenHash, session.UserID, userAgent, SessionTTL.Seconds()).Scan(&session.ExpiresAt)
-	})
+	err := tx.QueryRow(ctx, `
+		INSERT INTO sessions (token_hash, user_id, user_agent, expires_at)
+		VALUES ($1, $2, left($3, 256), now() + make_interval(secs => $4))
+		RETURNING expires_at`, tokenHash, session.UserID, userAgent, SessionTTL.Seconds()).Scan(&session.ExpiresAt)
 
 	return session, created, err
 }
 
-// session reads a live session and slides its expiry when a renewal is due.
+// session reads a live session and slides its expiry when a renewal is due, never past sessionMaxAge
+// from sign-in.
 func (s store) session(ctx context.Context, tokenHash []byte) (Session, error) {
 	var (
 		session Session
@@ -227,8 +245,10 @@ func (s store) session(ctx context.Context, tokenHash []byte) (Session, error) {
 	}
 
 	err = s.db.QueryRow(ctx, `
-		UPDATE sessions SET last_seen_at = now(), expires_at = now() + make_interval(secs => $2)
-		WHERE id = $1 RETURNING expires_at`, id, SessionTTL.Seconds()).Scan(&session.ExpiresAt)
+		UPDATE sessions
+		SET last_seen_at = now(),
+		    expires_at = least(now() + make_interval(secs => $2), created_at + make_interval(secs => $3))
+		WHERE id = $1 RETURNING expires_at`, id, SessionTTL.Seconds(), sessionMaxAge.Seconds()).Scan(&session.ExpiresAt)
 
 	return session, err
 }

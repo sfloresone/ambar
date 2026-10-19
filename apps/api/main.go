@@ -80,7 +80,6 @@ func run(ctx context.Context, getenv func(string) string) error {
 		allowedOrigins: splitList(envOr(getenv, "ALLOWED_ORIGINS", "http://localhost:4321,http://localhost:5173")),
 		// Only "true" when the API is reachable solely through our reverse proxy (see realIP).
 		trustProxy:   getenv("TRUST_PROXY") == "true",
-		cookieDomain: getenv("COOKIE_DOMAIN"),
 		secureCookie: production,
 	})
 
