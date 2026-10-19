@@ -11,6 +11,7 @@ require (
 	github.com/pb33f/libopenapi-validator v0.16.1
 	github.com/pressly/goose/v3 v3.28.0
 	github.com/resend/resend-go/v4 v4.8.1
+	golang.org/x/oauth2 v0.37.0
 )
 
 require (

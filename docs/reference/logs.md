@@ -22,7 +22,8 @@ Handlers log significant events with `event` as a stable, dot-separated name. Gr
 | `event` | Level | Attributes |
 | --- | --- | --- |
 | `auth.code_requested` | INFO | |
-| `auth.signed_in` | INFO | `user_id`, `created` (a new account), `method` (`code` or `link`) |
+| `auth.signed_in` | INFO | `user_id`, `created` (a new account), `method` (`code`, `link`, `google` or `github`) |
+| `auth.oauth_failed` | WARN, ERROR | `provider`, `reason` (the `error` the browser got), `err` (the provider's error code only, never its text). ERROR for `oauth-failed` |
 | `auth.signed_out` | INFO | |
 | `auth.email_failed` | ERROR | `err` (sign-in email not sent) |
 | `auth.failed` | ERROR | `err` (unexpected error, answered with `internal`) |
@@ -30,7 +31,7 @@ Handlers log significant events with `event` as a stable, dot-separated name. Gr
 
 ## Never logged
 
-Emails, codes, tokens, session IDs, request bodies, raw paths and query strings. If you need to correlate, use `request_id`.
+Emails, codes, tokens (including providers' access tokens and authorization codes), session IDs, request bodies, raw paths and query strings. If you need to correlate, use `request_id`.
 
 ## Correlating a user report
 

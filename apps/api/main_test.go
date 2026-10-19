@@ -141,27 +141,7 @@ func (m *captureMailer) SendSignIn(_ context.Context, _, code, link, _ string) e
 
 // The web flow over HTTP, against Postgres: email → code → cookie → session → sign out.
 func TestWebSignInOverHTTP(t *testing.T) {
-	if testing.Short() {
-		t.Skip("needs Postgres")
-	}
-
-	// The same .env.local as the API (never overriding a real variable); no URL lives in the code.
-	_ = godotenv.Load(".env.local")
-
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		t.Fatal("DATABASE_URL is not set: copy apps/api/.env.example to apps/api/.env.local, or run with -short")
-	}
-
-	pool, err := pgxpool.New(context.Background(), dbURL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer pool.Close()
-
-	if err := migrations.Up(context.Background(), pool); err != nil {
-		t.Fatalf("Postgres: %v", err)
-	}
+	pool := testPool(t)
 
 	var logs bytes.Buffer
 	mailer := &captureMailer{}
@@ -247,6 +227,36 @@ func TestWebSignInOverHTTP(t *testing.T) {
 	if strings.Contains(logs.String(), email) || strings.Contains(logs.String(), mailer.code) {
 		t.Fatalf("email or code leaked into logs: %s", logs.String())
 	}
+}
+
+// testPool connects to the development database, migrated. Skipped with -short.
+func testPool(t *testing.T) *pgxpool.Pool {
+	t.Helper()
+
+	if testing.Short() {
+		t.Skip("needs Postgres")
+	}
+
+	// The same .env.local as the API (never overriding a real variable); no URL lives in the code.
+	_ = godotenv.Load(".env.local")
+
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		t.Fatal("DATABASE_URL is not set: copy apps/api/.env.example to apps/api/.env.local, or run with -short")
+	}
+
+	pool, err := pgxpool.New(context.Background(), dbURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Cleanup(pool.Close)
+
+	if err := migrations.Up(context.Background(), pool); err != nil {
+		t.Fatalf("Postgres: %v", err)
+	}
+
+	return pool
 }
 
 func randomSuffix() string {

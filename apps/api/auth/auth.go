@@ -190,6 +190,27 @@ func (s *Service) signIn(ctx context.Context, consume check, userAgent string) (
 	return Verified{Session: session, Token: token, Created: created}, nil
 }
 
+// SignInWithProvider signs in someone a provider (Google, GitHub) vouched for: subject is the provider's
+// stable id, email one the provider verified. Linking by that email keeps one account per person.
+func (s *Service) SignInWithProvider(ctx context.Context, provider, subject, email, userAgent string) (Verified, error) {
+	email = NormalizeEmail(email)
+	if subject == "" || !plausibleEmail.MatchString(email) {
+		return Verified{}, ErrInvalidEmail
+	}
+
+	token, err := newToken()
+	if err != nil {
+		return Verified{}, err
+	}
+
+	session, created, err := s.store.signInIdentity(ctx, provider, subject, email, hashToken(token), userAgent)
+	if err != nil {
+		return Verified{}, err
+	}
+
+	return Verified{Session: session, Token: token, Created: created}, nil
+}
+
 // Session is the live session for token, renewed if it is due. ErrNoSession when missing, expired or
 // revoked.
 func (s *Service) Session(ctx context.Context, token string) (Session, error) {

@@ -20,6 +20,7 @@ import (
 	"ambar/api/auth"
 	"ambar/api/mail"
 	"ambar/api/migrations"
+	"ambar/api/oauth"
 )
 
 func main() {
@@ -60,6 +61,11 @@ func run(ctx context.Context, getenv func(string) string) error {
 		return err
 	}
 
+	providers, err := oauthProviders(getenv)
+	if err != nil {
+		return err
+	}
+
 	// The pool connects lazily: the API starts even if Postgres is down, and /healthz reports it.
 	db, err := pgxpool.New(ctx, databaseURL)
 	if err != nil {
@@ -80,6 +86,8 @@ func run(ctx context.Context, getenv func(string) string) error {
 		logger:         logger,
 		db:             db,
 		auth:           authService,
+		providers:      providers,
+		appURL:         strings.TrimSuffix(appURL, "/"),
 		allowedOrigins: splitList(env["ALLOWED_ORIGINS"]),
 		// Only "true" when the API is reachable solely through our reverse proxy (see realIP).
 		trustProxy:   getenv("TRUST_PROXY") == "true",
@@ -119,6 +127,44 @@ func run(ctx context.Context, getenv func(string) string) error {
 	logger.Info("api stopped cleanly")
 
 	return nil
+}
+
+// oauthProviders turns on each sign-in provider whose client id and secret are both set. The redirect URI
+// is API_URL/v1/auth/oauth/<name>/callback and must be registered at the provider exactly like that.
+func oauthProviders(getenv func(string) string) (map[string]*oauth.Provider, error) {
+	type credentials struct {
+		name, id, secret string
+		build            func(id, secret, redirectURL string, ep oauth.Endpoints) *oauth.Provider
+		endpoints        oauth.Endpoints
+	}
+
+	all := []credentials{
+		{"google", getenv("GOOGLE_CLIENT_ID"), getenv("GOOGLE_CLIENT_SECRET"), oauth.Google, oauth.GoogleEndpoints},
+		{"github", getenv("GITHUB_CLIENT_ID"), getenv("GITHUB_CLIENT_SECRET"), oauth.GitHub, oauth.GitHubEndpoints},
+	}
+
+	apiURL := strings.TrimSuffix(getenv("API_URL"), "/")
+	providers := map[string]*oauth.Provider{}
+
+	for _, c := range all {
+		key := strings.ToUpper(c.name)
+
+		switch {
+		case c.id == "" && c.secret == "":
+			continue
+		case c.id == "" || c.secret == "":
+			return nil, fmt.Errorf("set both %s_CLIENT_ID and %s_CLIENT_SECRET, or neither", key, key)
+		case apiURL == "":
+			return nil, fmt.Errorf("API_URL is required with %s sign-in: it builds the redirect URI", c.name)
+		}
+
+		redirectURL := apiURL + "/v1/auth/oauth/" + c.name + "/callback"
+		providers[c.name] = c.build(c.id, c.secret, redirectURL, c.endpoints)
+
+		slog.Info("sign-in provider on", "provider", c.name, "redirect_uri", redirectURL)
+	}
+
+	return providers, nil
 }
 
 // cleanupLoop runs auth cleanup once at start and then every auth.CleanupEvery until ctx ends.

@@ -22,11 +22,23 @@ Every error response is an [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) pr
 | `too-many-attempts` | 400 | The code is dead after too many wrong tries; ask for a new one |
 | `expired-code` | 400 | The code or link token is expired or already used |
 | `bad-request` | 400, 415 | The body is not `application/json` (415) or cannot be decoded (400) |
+| `provider-unavailable` | 404 | The sign-in provider is unknown or not configured on this server |
 | `unauthorized` | 401 | No valid session cookie or token |
 | `forbidden` | 403 | Browser request from an origin that is not allowed |
 | `rate-limited` | 429 | Too many emails for this address (carries `retryAfterMs`) or too many requests from this client |
 | `network` | 503 | The sign-in email could not be sent. Also sets `Retry-After` |
 | `internal` | 500 | Unexpected server error. The log line with the same `requestId` has the cause |
+
+## Provider sign-in redirects
+
+Google and GitHub sign-in happen in browser navigations, so their failures are not problem documents: the callback redirects to `<APP_URL>/login?error=<code>`.
+
+| `error` | When |
+| --- | --- |
+| `oauth-cancelled` | The person declined at the provider (`access_denied`) |
+| `oauth-state` | The attempt is missing, expired (10 minutes) or does not match: an old tab, another browser, or a forged request |
+| `oauth-email` | The provider has no verified email for the account (GitHub: unverified primary email) |
+| `oauth-failed` | Anything else: the provider is down, the code was rejected, or our client configuration is wrong. Logged as `auth.oauth_failed` |
 
 Rules for new codes:
 

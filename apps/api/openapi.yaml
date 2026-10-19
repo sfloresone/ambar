@@ -34,6 +34,7 @@ tags:
       Passwordless sign-in. The user asks for a code by email, then verifies the 6-digit code or the link token.
       Asking never reveals whether an account exists; verifying returns `created` so the UI can greet accordingly.
       Browsers receive the session as an httpOnly cookie; native clients ask for the token and send it as a bearer.
+      Browsers can also sign in with Google or GitHub (`startProviderSignIn`), onto the same accounts and sessions.
 paths:
   /healthz:
     get:
@@ -227,6 +228,90 @@ paths:
           $ref: "#/components/responses/TooManyRequests"
         "500":
           $ref: "#/components/responses/Internal"
+  /v1/auth/oauth/{provider}:
+    get:
+      operationId: startProviderSignIn
+      tags: [auth]
+      summary: Sign in with Google or GitHub
+      description: |
+        A browser navigation (a plain link), not a fetch. Starts the authorization code flow with PKCE: stores the
+        attempt (state, PKCE verifier, `returnTo`) in a short-lived httpOnly cookie and redirects to the provider's
+        consent page. The provider sends the browser back to `finishProviderSignIn`. Web only; native clients come later.
+        Limited to 60 requests per hour per client.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Provider"
+        - name: returnTo
+          in: query
+          required: false
+          description: Where to land after signing in. Kept only on an allowed origin; otherwise the app's home.
+          schema:
+            type: string
+            format: uri
+          example: https://app.ambar.page/
+      responses:
+        "302":
+          description: To the provider's consent page. Sets the `oauth` cookie (`__Host-oauth` in production) for 10 minutes.
+          headers:
+            Location:
+              $ref: "#/components/headers/Location"
+            X-Request-Id:
+              $ref: "#/components/headers/X-Request-Id"
+        "404":
+          $ref: "#/components/responses/ProviderUnavailable"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/Internal"
+  /v1/auth/oauth/{provider}/callback:
+    get:
+      operationId: finishProviderSignIn
+      tags: [auth]
+      summary: Provider callback
+      description: |
+        The redirect URI registered at the provider (`<API_URL>/v1/auth/oauth/{provider}/callback`). Checks `state`
+        against the attempt's cookie, exchanges the code with the PKCE verifier and reads who signed in (Google's
+        `sub`, GitHub's numeric id, and a verified email). A known identity signs in its account; a new one joins the
+        account with the same email or creates it. Sets the session cookie and redirects to `returnTo`.
+
+        Failures also redirect, to `<APP_URL>/login?error=<code>`: `oauth-cancelled` (the person declined),
+        `oauth-state` (missing, expired or mismatched attempt), `oauth-email` (no verified email at the provider),
+        `oauth-failed` (anything else; logged). Limited to 60 requests per hour per client.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Provider"
+        - name: code
+          in: query
+          required: false
+          description: The authorization code. Absent when the provider returns `error`.
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          description: Must match the attempt's cookie.
+          schema:
+            type: string
+        - name: error
+          in: query
+          required: false
+          description: The provider's RFC 6749 error code, e.g. `access_denied` when the person declines.
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Signed in (session cookie set, `Location` is `returnTo`) or not (`Location` is the app's sign-in page with `?error=`).
+          headers:
+            Location:
+              $ref: "#/components/headers/Location"
+            X-Request-Id:
+              $ref: "#/components/headers/X-Request-Id"
+        "404":
+          $ref: "#/components/responses/ProviderUnavailable"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/Internal"
 security:
   - sessionCookie: []
   - bearerToken: []
@@ -241,7 +326,21 @@ components:
       type: http
       scheme: bearer
       description: "The token returned once to native clients by `verifySignIn` with `client: \"native\"`."
+  parameters:
+    Provider:
+      name: provider
+      in: path
+      required: true
+      description: The sign-in provider. Only providers configured on the server are available.
+      schema:
+        type: string
+        enum: [google, github]
   headers:
+    Location:
+      description: Where the browser goes next.
+      schema:
+        type: string
+        format: uri
     X-Request-Id:
       description: Server-generated request ID. The same value appears in the server logs and inside error bodies as `requestId`.
       schema:
@@ -394,6 +493,7 @@ components:
             - invalid-code
             - too-many-attempts
             - expired-code
+            - provider-unavailable
             - unauthorized
             - forbidden
             - rate-limited
@@ -519,6 +619,22 @@ components:
             status: 503
             detail: We couldn't send the email. Try again in a moment.
             code: network
+            requestId: ambar-api/Kf3n2m0001
+    ProviderUnavailable:
+      description: The provider is unknown or not configured on this server (`provider-unavailable`).
+      headers:
+        X-Request-Id:
+          $ref: "#/components/headers/X-Request-Id"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          example:
+            type: https://docs.ambar.page/errors/provider-unavailable
+            title: Provider unavailable
+            status: 404
+            detail: That sign-in option isn't available.
+            code: provider-unavailable
             requestId: ambar-api/Kf3n2m0001
     Internal:
       description: Unexpected server error (`internal`). The log line with the same `requestId` has the cause.

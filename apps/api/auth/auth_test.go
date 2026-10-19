@@ -540,3 +540,68 @@ func TestCleanupKeepsOnlyRecentRows(t *testing.T) {
 		t.Fatal("cleanup removed recent rows")
 	}
 }
+
+// Provider sign-in: an identity is one account; a verified email joins the account that already has it.
+func TestSignInWithProvider(t *testing.T) {
+	s, _, db := newTestService(t)
+	ctx := context.Background()
+	email := uniqueEmail()
+	subject := "gh-" + email
+
+	first, err := s.SignInWithProvider(ctx, "github", subject, strings.ToUpper(email), "test")
+	if err != nil || !first.Created || first.Session.Email != email || first.Token == "" {
+		t.Fatalf("new identity: %+v %v", first, err)
+	}
+
+	again, err := s.SignInWithProvider(ctx, "github", subject, email, "test")
+	if err != nil || again.Created || again.Session.UserID != first.Session.UserID {
+		t.Fatalf("same identity: %+v %v", again, err)
+	}
+
+	// Another provider with the same verified email: the same account, linked.
+	google, err := s.SignInWithProvider(ctx, "google", "g-"+email, email, "test")
+	if err != nil || google.Created || google.Session.UserID != first.Session.UserID {
+		t.Fatalf("second provider: %+v %v", google, err)
+	}
+
+	var identities int
+	if err := db.QueryRow(ctx, `SELECT count(*) FROM user_identities WHERE user_id = $1`, first.Session.UserID).Scan(&identities); err != nil || identities != 2 {
+		t.Fatalf("identities: %d %v", identities, err)
+	}
+
+	// The email changed at the provider: the identity still signs in to the same account, which keeps its email.
+	moved, err := s.SignInWithProvider(ctx, "github", subject, uniqueEmail(), "test")
+	if err != nil || moved.Created || moved.Session.UserID != first.Session.UserID || moved.Session.Email != email {
+		t.Fatalf("changed email: %+v %v", moved, err)
+	}
+
+	// The session works like any other.
+	if session, err := s.Session(ctx, moved.Token); err != nil || session.UserID != first.Session.UserID {
+		t.Fatalf("session: %+v %v", session, err)
+	}
+
+	if _, err := s.SignInWithProvider(ctx, "github", "", email, "test"); !errors.Is(err, ErrInvalidEmail) {
+		t.Fatalf("no subject: %v", err)
+	}
+}
+
+// An account made with an email code is joined, not duplicated, by a provider with the same email.
+func TestProviderJoinsEmailAccount(t *testing.T) {
+	s, mailer, _ := newTestService(t)
+	ctx := context.Background()
+	email := uniqueEmail()
+
+	if _, err := s.RequestEmail(ctx, email, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	byCode, err := s.VerifyCode(ctx, email, mailer.last(t).code, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	byGoogle, err := s.SignInWithProvider(ctx, "google", "g-"+email, email, "test")
+	if err != nil || byGoogle.Created || byGoogle.Session.UserID != byCode.Session.UserID {
+		t.Fatalf("join: %+v %v", byGoogle, err)
+	}
+}
