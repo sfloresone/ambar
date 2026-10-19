@@ -127,3 +127,5 @@ bun run typecheck
 bun run lint
 bun run build
 ```
+
+CI (`.github/workflows/ci.yml`, Node 22) runs these plus `bun run --filter @ambar/core test` and `bun run test:api` against Postgres 18 on every pull request and push to `main`.
