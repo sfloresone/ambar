@@ -1,8 +1,9 @@
-// Settings → Sign-in methods: the ways into this Ambar, one row each. Google and GitHub connect through
+// Settings → Sign-in methods: every way into Ambar, one row each, whether or not this server has it on
+// (a provider it hasn't configured shows "Not available" instead of Connect). Google and GitHub connect through
 // the provider handoff (the iris closes onto the row's logo) and come back to returnTo; disconnecting is
 // one tap, reversible, and never locks anyone out (codes to the account's email always work). Email and
 // password is a placeholder until passwords exist.
-import type { AuthClient, Identity, Provider } from "@ambar/core";
+import { PROVIDERS, type AuthClient, type Identity, type Provider } from "@ambar/core";
 import { EnvelopeSimpleIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
@@ -32,13 +33,12 @@ export function SignInMethods({ auth, returnTo }: SignInMethodsProps) {
   useEffect(() => {
     let active = true;
 
-    void Promise.all([auth.providers(), auth.identities()])
-      .then(([providers, identities]) => {
-        if (active) {
-          setLoaded({ providers, identities });
-        }
-      })
-      .catch(() => active && setLoaded({ providers: [], identities: [] }));
+    // providers() never fails (it reads as none); identities can, and must not hide the providers.
+    void Promise.all([auth.providers(), auth.identities().catch(() => [])]).then(([providers, identities]) => {
+      if (active) {
+        setLoaded({ providers, identities });
+      }
+    });
 
     return () => {
       active = false;
@@ -77,8 +77,10 @@ export function SignInMethods({ auth, returnTo }: SignInMethodsProps) {
             Enable
           </Button>
         </MethodRow>
-        {loaded?.providers.map((provider) => {
-          const identity = loaded.identities.find((item) => item.provider === provider);
+        {PROVIDERS.map((provider) => {
+          const identity = loaded?.identities.find((item) => item.provider === provider);
+          // Unknown until loaded; then off when this server hasn't configured the provider.
+          const available = loaded?.providers.includes(provider) ?? false;
 
           return (
             <MethodRow
@@ -100,12 +102,13 @@ export function SignInMethods({ auth, returnTo }: SignInMethodsProps) {
               label={`Sign in with ${PROVIDER_NAME[provider]}`}
               detail={identity?.email}
             >
+              {loaded !== null && !available && identity === undefined && <span className="text-xs text-muted-foreground">Not available</span>}
               {/* One button per row, so focus stays on it when it turns from Disconnect into Connect. */}
               <Button
                 tone="cloud"
                 size="sm"
                 loading={busy === provider}
-                disabled={leaving !== null}
+                disabled={loaded === null || leaving !== null || (!available && identity === undefined)}
                 aria-label={identity === undefined ? `Connect ${PROVIDER_NAME[provider]}` : `Disconnect ${PROVIDER_NAME[provider]}`}
                 onClick={() => void (identity === undefined ? connect(provider) : disconnect(provider))}
               >
