@@ -4,8 +4,8 @@
 // one tap, reversible, and never locks anyone out (codes to the account's email always work). Email and
 // password is a placeholder until passwords exist.
 import { PROVIDERS, type AuthClient, type Identity, type Provider } from "@ambar/core";
-import { EnvelopeSimpleIcon } from "@phosphor-icons/react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { CheckCircleIcon, EnvelopeSimpleIcon } from "@phosphor-icons/react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { Button } from "../../components/button.tsx";
 import { useProviderHandoff } from "../../components/provider-handoff.tsx";
@@ -20,7 +20,8 @@ type SignInMethodsProps = {
 
 type Loaded = {
   providers: Provider[];
-  identities: Identity[];
+  /** null: the connected accounts couldn't be read, so no row may claim either state. */
+  identities: Identity[] | null;
 };
 
 export function SignInMethods({ auth, returnTo }: SignInMethodsProps) {
@@ -30,11 +31,12 @@ export function SignInMethods({ auth, returnTo }: SignInMethodsProps) {
   const logos = useRef(new Map<Provider, HTMLSpanElement>());
   const { start, leaving, overlay } = useProviderHandoff();
 
-  useEffect(() => {
+  const load = useCallback(() => {
     let active = true;
 
-    // providers() never fails (it reads as none); identities can, and must not hide the providers.
-    void Promise.all([auth.providers(), auth.identities().catch(() => [])]).then(([providers, identities]) => {
+    // providers() never fails (it reads as none). identities can: then we say so instead of showing
+    // every provider as not connected.
+    void Promise.all([auth.providers(), auth.identities().catch(() => null)]).then(([providers, identities]) => {
       if (active) {
         setLoaded({ providers, identities });
       }
@@ -45,6 +47,8 @@ export function SignInMethods({ auth, returnTo }: SignInMethodsProps) {
     };
   }, [auth]);
 
+  useEffect(() => load(), [load]);
+
   async function connect(provider: Provider) {
     start(provider, logos.current.get(provider) ?? null, await auth.startProviderSignIn(provider, { returnTo, intent: "link" }));
   }
@@ -54,7 +58,7 @@ export function SignInMethods({ auth, returnTo }: SignInMethodsProps) {
 
     try {
       await auth.disconnect(provider);
-      setLoaded((current) => current && { ...current, identities: current.identities.filter((identity) => identity.provider !== provider) });
+      setLoaded((current) => current && { ...current, identities: current.identities?.filter((identity) => identity.provider !== provider) ?? null });
       toast.add({ title: `${PROVIDER_NAME[provider]} disconnected.`, description: "You can connect it again any time." });
     } catch {
       toast.add({ title: `We couldn't disconnect ${PROVIDER_NAME[provider]}.`, description: "Check your connection and try again." });
@@ -78,9 +82,10 @@ export function SignInMethods({ auth, returnTo }: SignInMethodsProps) {
           </Button>
         </MethodRow>
         {PROVIDERS.map((provider) => {
-          const identity = loaded?.identities.find((item) => item.provider === provider);
+          const identity = loaded?.identities?.find((item) => item.provider === provider);
           // Unknown until loaded; then off when this server hasn't configured the provider.
           const available = loaded?.providers.includes(provider) ?? false;
+          const known = loaded !== null && loaded.identities !== null;
 
           return (
             <MethodRow
@@ -102,13 +107,19 @@ export function SignInMethods({ auth, returnTo }: SignInMethodsProps) {
               label={`Sign in with ${PROVIDER_NAME[provider]}`}
               detail={identity?.email}
             >
-              {loaded !== null && !available && identity === undefined && <span className="text-xs text-muted-foreground">Not available</span>}
+              {identity !== undefined && (
+                <span className="flex items-center gap-1.5 text-xs font-medium text-leaf">
+                  <CheckCircleIcon weight="fill" aria-hidden className="size-4" />
+                  Connected
+                </span>
+              )}
+              {known && !available && identity === undefined && <span className="text-xs text-muted-foreground">Not available</span>}
               {/* One button per row, so focus stays on it when it turns from Disconnect into Connect. */}
               <Button
                 tone="cloud"
                 size="sm"
                 loading={busy === provider}
-                disabled={loaded === null || leaving !== null || (!available && identity === undefined)}
+                disabled={!known || leaving !== null || (!available && identity === undefined)}
                 aria-label={identity === undefined ? `Connect ${PROVIDER_NAME[provider]}` : `Disconnect ${PROVIDER_NAME[provider]}`}
                 onClick={() => void (identity === undefined ? connect(provider) : disconnect(provider))}
               >
@@ -118,6 +129,21 @@ export function SignInMethods({ auth, returnTo }: SignInMethodsProps) {
           );
         })}
       </ul>
+      {loaded !== null && loaded.identities === null && (
+        <p aria-live="polite" className="text-sm text-muted-foreground">
+          We couldn't check which accounts are connected.{" "}
+          <button
+            type="button"
+            onClick={() => {
+              setLoaded(null);
+              load();
+            }}
+            className="rounded-sm font-medium text-link underline-offset-4 outline-hidden hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ring"
+          >
+            Try again
+          </button>
+        </p>
+      )}
       <p aria-live="polite" className="sr-only">
         {leaving === null ? "" : `Connecting to ${PROVIDER_NAME[leaving]}`}
       </p>
