@@ -11,17 +11,24 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
+	"github.com/pressly/goose/v3/lock"
 )
 
 //go:embed *.sql
 var files embed.FS
 
-// Up applies every pending migration.
+// Up applies every pending migration. A Postgres advisory lock serializes concurrent callers (two
+// instances starting, or test packages running in parallel), so only one applies each migration.
 func Up(ctx context.Context, pool *pgxpool.Pool) error {
 	db := stdlib.OpenDBFromPool(pool)
 	defer db.Close()
 
-	provider, err := goose.NewProvider(goose.DialectPostgres, db, files)
+	locker, err := lock.NewPostgresSessionLocker(lock.WithLockTimeout(1, 60))
+	if err != nil {
+		return fmt.Errorf("migrations: %w", err)
+	}
+
+	provider, err := goose.NewProvider(goose.DialectPostgres, db, files, goose.WithSessionLocker(locker))
 	if err != nil {
 		return fmt.Errorf("migrations: %w", err)
 	}

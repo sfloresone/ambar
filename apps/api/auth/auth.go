@@ -222,6 +222,14 @@ func (s *Service) SignOut(ctx context.Context, token string) error {
 	return s.store.revokeSession(ctx, hashToken(token))
 }
 
+// CleanupEvery is how often Cleanup should run.
+const CleanupEvery = time.Hour
+
+// Cleanup deletes old challenges and dead sessions, so the auth tables don't grow forever.
+func (s *Service) Cleanup(ctx context.Context) (challenges, sessions int64, err error) {
+	return s.store.deleteExpired(ctx)
+}
+
 // NormalizeEmail matches normalizeEmail in @ambar/core.
 func NormalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))

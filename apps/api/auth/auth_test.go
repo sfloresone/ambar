@@ -441,3 +441,53 @@ func TestLinkReturnsWhereTheFlowStarted(t *testing.T) {
 		t.Fatalf("link: %s (%v)", mailer.last(t).link, err)
 	}
 }
+
+func TestCleanupKeepsOnlyRecentRows(t *testing.T) {
+	ctx := context.Background()
+	s, mailer, db := newTestService(t)
+	old, recent := uniqueEmail(), uniqueEmail()
+	userIDs := map[string]string{}
+
+	for _, email := range []string{old, recent} {
+		if _, err := s.RequestEmail(ctx, email, "", ""); err != nil {
+			t.Fatal(err)
+		}
+
+		verified, err := s.VerifyCode(ctx, email, mailer.last(t).code, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		userIDs[email] = verified.Session.UserID
+	}
+
+	age(t, db, old, 2*24*time.Hour)
+
+	if _, err := db.Exec(ctx, `UPDATE sessions SET revoked_at = now() - interval '2 days' WHERE user_id = $1`, userIDs[old]); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, _, err := s.Cleanup(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	count := func(query, arg string) int {
+		var n int
+		if err := db.QueryRow(ctx, query, arg).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+
+		return n
+	}
+
+	challenges := `SELECT count(*) FROM email_challenges WHERE email = $1`
+	sessions := `SELECT count(*) FROM sessions WHERE user_id = $1`
+
+	if count(challenges, old) != 0 || count(sessions, userIDs[old]) != 0 {
+		t.Fatal("old rows survived cleanup")
+	}
+
+	if count(challenges, recent) != 1 || count(sessions, userIDs[recent]) != 1 {
+		t.Fatal("cleanup removed recent rows")
+	}
+}
