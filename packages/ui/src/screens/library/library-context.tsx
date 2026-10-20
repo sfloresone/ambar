@@ -1,12 +1,13 @@
 // The library's state for a screen: moments, the Trash and collections from a LibraryClient (mock today),
 // and the actions that change them. Keeping something offers its suggested collection with one tap;
 // deleting moves it to the Trash and offers Undo.
-import { momentLabel, type AskResult, type Collection, type KeepInput, type LibraryClient, type Moment } from "@ambar/core";
+import { momentLabel, type AskResult, type Collection, type KeepInput, type LibraryClient, type Moment, type MomentKeeper } from "@ambar/core";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { useToast } from "../../components/toaster.tsx";
 
 type Library = {
+  keeper?: MomentKeeper;
   /** Kept moments; null while loading. */
   moments: Moment[] | null;
   /** Moments in the Trash, most recently deleted first; null while loading. */
@@ -16,6 +17,8 @@ type Library = {
   ask: (query: string) => Promise<AskResult>;
   keep: (input: KeepInput<File>) => Promise<void>;
   setCollections: (momentId: string, collectionIds: string[]) => Promise<void>;
+  renameMoment: (momentId: string, title: string) => Promise<void>;
+  setCanvas: (moment: Moment, included: boolean) => Promise<void>;
   createCollection: (name: string) => Promise<Collection>;
   moveToTrash: (moment: Moment) => Promise<void>;
   restore: (momentId: string) => Promise<void>;
@@ -27,12 +30,13 @@ const LibraryContext = createContext<Library | null>(null);
 
 type LibraryProviderProps = {
   client: LibraryClient<File>;
+  keeper?: MomentKeeper;
   children: ReactNode;
 };
 
 const byNewest = (a: Moment, b: Moment) => Date.parse(b.createdAt) - Date.parse(a.createdAt);
 
-export function LibraryProvider({ client, children }: LibraryProviderProps) {
+export function LibraryProvider({ client, keeper, children }: LibraryProviderProps) {
   const toast = useToast();
   const [moments, setMoments] = useState<Moment[] | null>(null);
   const [trash, setTrash] = useState<Moment[] | null>(null);
@@ -121,12 +125,24 @@ export function LibraryProvider({ client, children }: LibraryProviderProps) {
 
   const value = useMemo<Library>(
     () => ({
+      keeper,
       moments,
       trash,
       collections,
       ask: (query) => client.ask(query),
       keep,
       setCollections,
+      async renameMoment(momentId, title) {
+        const updated = await client.renameMoment(momentId, title);
+
+        setMoments((current) => current?.map((item) => (item.id === updated.id ? updated : item)) ?? [updated]);
+      },
+      async setCanvas(moment, included) {
+        const updated = await client.setCanvas(moment.id, included);
+
+        setMoments((current) => current?.map((item) => (item.id === updated.id ? updated : item)) ?? [updated]);
+        toast.add({ title: included ? "Added to Canvas" : "Removed from Canvas", description: momentLabel(updated) });
+      },
       async createCollection(name) {
         const collection = await client.createCollection(name);
 
@@ -145,7 +161,7 @@ export function LibraryProvider({ client, children }: LibraryProviderProps) {
         setTrash([]);
       },
     }),
-    [client, collections, keep, moments, moveToTrash, restore, setCollections, trash],
+    [client, collections, keep, keeper, moments, moveToTrash, restore, setCollections, toast, trash],
   );
 
   return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>;

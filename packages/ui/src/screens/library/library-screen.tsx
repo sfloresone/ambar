@@ -49,9 +49,10 @@ export function LibraryScreen({ onOpenMoment }: LibraryScreenProps) {
       <KeepZone />
       <header className="flex flex-wrap items-center justify-between gap-4">
         {/* Also where focus lands after the iris opens. */}
-        <h1 tabIndex={-1} className="text-3xl tracking-tight">
-          Moments
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 tabIndex={-1} className="text-3xl tracking-tight">Moments</h1>
+          {moments !== null && <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground tabular-nums" aria-label={`${moments.length} kept moments`}>{moments.length}</span>}
+        </div>
         <div className="flex items-center gap-3">
           <SegmentedControl options={[...MOMENTS_VIEWS]} icons={VIEW_ICONS} label="Layout" defaultValue={view} onValueChange={setView} />
           <KeepButton />
@@ -59,7 +60,7 @@ export function LibraryScreen({ onOpenMoment }: LibraryScreenProps) {
       </header>
 
       {/* The grid's place is held while loading, then the moments fade in where the placeholders were. */}
-      <SkeletonSwap ready={moments !== null} label="Moments" skeleton={<LoadingGrid />} className={moments === null ? "min-h-[60svh]" : undefined}>
+      <SkeletonSwap ready={moments !== null} label="Moments" skeleton={<LoadingGrid columns={view === "list" ? 3 : GRID_COLUMNS[view]} />} className={moments === null ? "min-h-[60svh]" : undefined}>
         {moments?.length === 0 && <EmptyLibrary />}
         {moments !== null &&
           moments.length > 0 &&

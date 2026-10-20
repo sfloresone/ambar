@@ -1,13 +1,13 @@
-// One card per moment, with a frame that says what it is at a glance: a photo is framed like a print, a
-// clip sits in a film strip, a link is a postcard with its site stamped on it, a document is a page with
-// a folded corner. Frames inspired by opensourceui's polaroid, film-strip and postcard cards (MIT).
-import { momentLabel, type Moment } from "@ambar/core";
-import { ArrowUpRightIcon, FilePdfIcon, PlayIcon } from "@phosphor-icons/react";
-import { useState } from "react";
+// Content first: an uncropped preview, then the keeper, title, source and a stable menu in one footer.
+import { momentImage, momentLabel, type Moment, type MomentKeeper } from "@ambar/core";
+import { FilePdfIcon, GlobeHemisphereWestIcon, ImageIcon, LinkSimpleIcon, PlayIcon, UserIcon } from "@phosphor-icons/react";
+import { useRef, useState } from "react";
 
+import { Button } from "../../components/button.tsx";
 import { cn } from "../../lib/utils.ts";
 import { aspectOf, duration, shortDate, sourceOf } from "./format.ts";
-import { QuickActions } from "./moment-actions.tsx";
+import { useLibrary } from "./library-context.tsx";
+import { MomentMenu, QuickActions, useMomentActions } from "./moment-actions.tsx";
 
 type MomentCardProps = {
   moment: Moment;
@@ -18,125 +18,94 @@ type MomentCardProps = {
 };
 
 export function MomentCard({ moment, onOpen, size = "default", className }: MomentCardProps) {
+  const card = useRef<HTMLElement>(null);
+  const actions = useMomentActions(moment);
+  const { keeper } = useLibrary();
   const label = momentLabel(moment);
+  const source = sourceOf(moment);
+
+  const kindLabel = moment.kind === "clip"
+    ? `clip, ${duration(moment.durationMs)}`
+    : moment.kind === "file"
+      ? `PDF${moment.pages === undefined ? "" : ` · ${moment.pages} ${moment.pages === 1 ? "page" : "pages"}`}`
+      : moment.kind;
 
   return (
-    <article data-slot="moment-card" data-kind={moment.kind} className={cn("group relative", className)}>
-      <button
-        type="button"
-        onClick={() => onOpen(moment)}
-        aria-label={`${label}, ${moment.kind === "file" ? "document" : moment.kind}, ${shortDate(moment.createdAt)}`}
-        className="block w-full cursor-pointer rounded-2xl text-left outline-hidden transition-transform duration-200 ease-out-soft focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-solid focus-visible:outline-ring active:scale-[0.99] motion-reduce:transition-none"
-      >
-        <Frame moment={moment} feature={size === "feature"} />
-      </button>
-      <QuickActions
-        moment={moment}
-        className="absolute top-3 right-3 opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100"
-      />
+    <article
+      ref={card}
+      data-slot="moment-card"
+      data-kind={moment.kind}
+      className={cn("group relative min-w-0 rounded-3xl border border-border/70 bg-muted/35 p-1.5 shadow-[0_1px_2px_rgb(20_20_20/0.04)]", className)}
+    >
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => onOpen(moment)}
+          aria-label={`Open ${label}, ${kindLabel}, ${shortDate(moment.createdAt)}`}
+          className="block w-full cursor-pointer overflow-hidden rounded-[1.125rem] bg-card outline-hidden focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-solid focus-visible:outline-ring"
+        >
+          <Preview key={momentImage(moment)} moment={moment} />
+        </button>
+        <QuickActions
+          moment={moment}
+          className="pointer-events-none absolute top-3 right-3 opacity-0 transition-opacity duration-150 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 motion-reduce:transition-none pointer-coarse:pointer-events-auto pointer-coarse:opacity-100"
+        />
+      </div>
+      <div className="flex min-w-0 items-center gap-2.5 px-2 py-3">
+        <Keeper keeper={moment.keptBy ?? keeper} />
+        <div className="min-w-0 flex-1">
+          <button
+            type="button"
+            onClick={() => onOpen(moment)}
+            title={label}
+            className="block w-full cursor-pointer truncate rounded-sm text-left font-medium text-foreground outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ring"
+          >
+            <span className={size === "feature" ? "text-lg" : "text-sm"}>{label}</span>
+          </button>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+            {source !== undefined && <span>{source} · </span>}
+            <time dateTime={moment.createdAt}>{shortDate(moment.createdAt)}</time>
+          </p>
+        </div>
+        {moment.kind === "link" && (
+          <Button tone="cloud" size="icon-sm" onClick={actions.open} aria-label={`Open ${source ?? label}`} title={moment.url}>
+            <LinkSimpleIcon weight="bold" aria-hidden />
+          </Button>
+        )}
+        <MomentMenu moment={moment} container={card} />
+      </div>
     </article>
   );
 }
 
-function Frame({ moment, feature }: { moment: Moment; feature: boolean }) {
-  switch (moment.kind) {
-    case "photo":
-      return (
-        <div className="rounded-2xl border bg-card p-2 pb-3 shadow-[0_1px_2px_rgb(20_20_20/0.05),0_8px_20px_rgb(20_20_20/0.05)]">
-          <Media src={moment.mediaUrl} ratio={aspectOf(moment)} className="rounded-xl" />
-          <Caption moment={moment} feature={feature} />
-        </div>
-      );
-    case "clip":
-      return (
-        <div className="rounded-2xl bg-ink px-2 pb-3 text-cloud shadow-[0_8px_20px_rgb(20_20_20/0.18)]">
-          <Sprockets />
-          <div className="relative">
-            <Media src={moment.posterUrl} ratio={aspectOf(moment)} className="rounded-md" />
-            <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-ink/75 px-2 py-0.5 text-xs font-medium tabular-nums backdrop-blur">
-              <PlayIcon weight="fill" aria-hidden className="size-3" />
-              {duration(moment.durationMs)}
-            </span>
-          </div>
-          <Sprockets />
-          <Caption moment={moment} feature={feature} tone="dark" />
-        </div>
-      );
-    case "link": {
-      const source = sourceOf(moment);
-
-      return (
-        <div className="overflow-hidden rounded-2xl border bg-card shadow-[0_1px_2px_rgb(20_20_20/0.05),0_8px_20px_rgb(20_20_20/0.05)]">
-          {moment.imageUrl !== undefined && <Media src={moment.imageUrl} ratio={aspectOf(moment)} />}
-          <div className="relative flex flex-col gap-1.5 p-3.5">
-            {/* The site, stamped on the postcard. */}
-            <span aria-hidden className="absolute -top-5 right-3 grid size-10 rotate-3 place-items-center rounded-sm border-2 border-dashed border-ink/20 bg-cloud font-heading text-base font-bold text-ink uppercase">
-              {(source ?? "·").charAt(0)}
-            </span>
-            <p className={cn("line-clamp-2 pr-10 font-medium text-pretty", feature ? "text-lg" : "text-sm")}>{momentLabel(moment)}</p>
-            <p className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
-              <ArrowUpRightIcon weight="bold" aria-hidden className="size-3 shrink-0" />
-              <span className="truncate">{[source, shortDate(moment.createdAt)].filter(Boolean).join(" · ")}</span>
-            </p>
-          </div>
-        </div>
-      );
-    }
-
-    case "file":
-      return (
-        <div className="rounded-2xl border bg-card p-3 shadow-[0_1px_2px_rgb(20_20_20/0.05),0_8px_20px_rgb(20_20_20/0.05)]">
-          <div className="relative">
-            {/* A page with its corner folded. */}
-            <Media src={moment.previewUrl} ratio={aspectOf(moment)} className="rounded-sm border [clip-path:polygon(0_0,calc(100%-1.5rem)_0,100%_1.5rem,100%_100%,0_100%)]" />
-            <span aria-hidden className="absolute top-0 right-0 size-6 rounded-bl-md bg-muted shadow-[-1px_1px_2px_rgb(20_20_20/0.12)]" />
-            <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-ink px-2 py-0.5 text-xs font-medium text-cloud">
-              <FilePdfIcon weight="bold" aria-hidden className="size-3.5" />
-              PDF{moment.pages === undefined ? "" : ` · ${moment.pages} ${moment.pages === 1 ? "page" : "pages"}`}
-            </span>
-          </div>
-          <Caption moment={moment} feature={feature} />
-        </div>
-      );
-  }
-}
-
-function Caption({ moment, feature, tone = "light" }: { moment: Moment; feature: boolean; tone?: "light" | "dark" }) {
-  const source = sourceOf(moment);
+/** A keeper is authorship, never inferred from the moment's sharing permissions. */
+function Keeper({ keeper }: { keeper?: MomentKeeper }) {
+  const [failed, setFailed] = useState(false);
+  const name = keeper?.name ?? "you";
+  const initials = name.split(/\s+/).slice(0, 2).map((part) => part.charAt(0)).join("");
 
   return (
-    <div className="flex flex-col gap-0.5 px-1.5 pt-2.5">
-      <p className={cn("truncate font-medium", feature ? "text-lg" : "text-sm")}>{momentLabel(moment)}</p>
-      <p className={cn("truncate text-xs", tone === "dark" ? "text-cloud/60" : "text-muted-foreground")}>
-        {[source, shortDate(moment.createdAt)].filter(Boolean).join(" · ")}
-      </p>
-    </div>
+    <span title={`Kept by ${name}`} className="relative grid size-8 shrink-0 place-items-center overflow-hidden rounded-full border border-border/60 bg-sky/25 text-xs font-medium text-foreground uppercase">
+      <span className="sr-only">Kept by {name}</span>
+      {keeper === undefined ? <UserIcon weight="bold" aria-hidden className="size-4" /> : <span aria-hidden>{initials}</span>}
+      {keeper?.avatarUrl !== undefined && !failed && (
+        <img src={keeper.avatarUrl} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} className="absolute inset-0 size-full object-cover" />
+      )}
+    </span>
   );
 }
 
-function Sprockets() {
-  return (
-    <div aria-hidden className="flex justify-between px-1 py-1.5">
-      {Array.from({ length: 9 }, (_, index) => (
-        <span key={`hole-${index}`} className="h-1.5 w-2.5 rounded-[2px] bg-cloud/25" />
-      ))}
-    </div>
-  );
-}
-
-type MediaProps = {
-  src?: string;
-  ratio: string;
-  className?: string;
-};
-
-/** The image, fading in once decoded; a quiet placeholder until then (or if there is none). */
-function Media({ src, ratio, className }: MediaProps) {
+/** Bound very tall previews to the card while keeping every pixel of the original visible. */
+function Preview({ moment }: { moment: Moment }) {
   const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const src = momentImage(moment);
+  const missing = src === undefined || src === "" || failed;
+  const Icon = moment.kind === "link" ? GlobeHemisphereWestIcon : moment.kind === "file" ? FilePdfIcon : ImageIcon;
 
   return (
-    <div className={cn("relative overflow-hidden bg-muted", className)} style={{ aspectRatio: ratio }}>
-      {src !== undefined && src !== "" && (
+    <div aria-hidden="true" className="relative max-h-144 min-h-36 overflow-hidden bg-muted/35" style={{ aspectRatio: aspectOf(moment) }}>
+      {!missing && (
         <img
           src={src}
           alt=""
@@ -144,10 +113,32 @@ function Media({ src, ratio, className }: MediaProps) {
           decoding="async"
           draggable={false}
           onLoad={() => setLoaded(true)}
-          className={cn("absolute inset-0 size-full object-cover transition-opacity duration-500 motion-reduce:transition-none", loaded ? "opacity-100" : "opacity-0")}
+          onError={() => setFailed(true)}
+          className={cn("absolute inset-0 size-full object-contain transition-opacity duration-200 motion-reduce:transition-none", loaded ? "opacity-100" : "opacity-0")}
         />
+      )}
+      {missing && (
+        <span className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-muted-foreground">
+          <Icon weight="duotone" aria-hidden className="size-10" />
+          <span className="max-w-full truncate text-sm">{moment.kind === "link" ? sourceOf(moment) ?? "Saved link" : "Preview unavailable"}</span>
+        </span>
+      )}
+      {moment.kind === "clip" && (
+        <>
+          <span className="absolute inset-0 grid place-items-center">
+            <span className="grid size-12 place-items-center rounded-full border border-cloud/30 bg-ink/65 text-cloud backdrop-blur-sm">
+              <PlayIcon weight="fill" aria-hidden className="ml-0.5 size-5" />
+            </span>
+          </span>
+          <span className="absolute right-3 bottom-3 rounded-md bg-ink/75 px-2 py-1 text-xs font-medium text-cloud tabular-nums">{duration(moment.durationMs)}</span>
+        </>
+      )}
+      {moment.kind === "file" && (
+        <span className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-md bg-cloud/95 px-2 py-1 text-xs font-medium text-ink">
+          <FilePdfIcon weight="bold" aria-hidden className="size-3.5" />
+          PDF{moment.pages === undefined ? "" : ` · ${moment.pages} ${moment.pages === 1 ? "page" : "pages"}`}
+        </span>
       )}
     </div>
   );
 }
-

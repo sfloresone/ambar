@@ -1,5 +1,5 @@
 // Canvas (prototype): the library laid out on one large board you move around. Opening it lands straight
-// on the content; the header steps aside while you look. Read-only for now: arranging comes later.
+// on the content selected from Moments; the header steps aside while you look. Arranging comes later.
 // Panning writes the transform directly (no React render per pointer move).
 import { momentImage, momentLabel, type Moment } from "@ambar/core";
 import { useEffect, useEffectEvent, useRef, type PointerEvent, type WheelEvent } from "react";
@@ -11,7 +11,7 @@ const COLUMNS = 6;
 
 const CELL = { width: 300, height: 380 };
 
-const BOARD = { width: COLUMNS * CELL.width + 240, padding: 120 };
+const BOARD = { padding: 120 };
 
 /** Beyond this, a press is a drag, not a click. */
 const DRAG_PX = 5;
@@ -37,16 +37,18 @@ export function CanvasScreen({ onOpenMoment }: CanvasScreenProps) {
   const board = useRef<HTMLDivElement>(null);
   const offset = useRef({ x: 0, y: 0 });
   const drag = useRef<{ x: number; y: number; moved: boolean } | null>(null);
-  const list = moments ?? [];
+  const list = moments?.filter((moment) => moment.onCanvas) ?? [];
   const rows = Math.ceil(list.length / COLUMNS);
+  const width = Math.min(COLUMNS, list.length) * CELL.width + BOARD.padding * 2;
   const height = rows * CELL.height + BOARD.padding * 2;
 
   function apply(x: number, y: number) {
     const view = viewport.current?.getBoundingClientRect();
-    const minX = Math.min(0, (view?.width ?? 0) - BOARD.width);
+    const availableX = (view?.width ?? 0) - width;
+    const minX = Math.min(0, availableX);
     const minY = Math.min(0, (view?.height ?? 0) - height);
 
-    offset.current = { x: Math.max(minX, Math.min(0, x)), y: Math.max(minY, Math.min(0, y)) };
+    offset.current = { x: availableX > 0 ? availableX / 2 : Math.max(minX, Math.min(0, x)), y: Math.max(minY, Math.min(0, y)) };
 
     if (board.current) {
       board.current.style.transform = `translate3d(${offset.current.x}px, ${offset.current.y}px, 0)`;
@@ -57,7 +59,7 @@ export function CanvasScreen({ onOpenMoment }: CanvasScreenProps) {
     const view = viewport.current?.getBoundingClientRect();
 
     if (view) {
-      apply((view.width - BOARD.width) / 2, 0);
+      apply((view.width - width) / 2, 0);
     }
   });
 
@@ -127,7 +129,13 @@ export function CanvasScreen({ onOpenMoment }: CanvasScreenProps) {
       className="fixed inset-0 cursor-grab touch-none overflow-hidden bg-muted/60 select-none active:cursor-grabbing [background-image:radial-gradient(rgb(20_20_20/0.12)_1px,transparent_1px)] [background-size:24px_24px]"
     >
       <h1 className="sr-only">Canvas</h1>
-      <div ref={board} className="relative will-change-transform" style={{ width: BOARD.width, height }}>
+      {moments !== null && list.length === 0 && (
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
+          <p className="font-heading text-2xl font-bold">Your canvas is empty</p>
+          <p className="max-w-sm text-sm text-muted-foreground">Choose “Add to Canvas” from a moment's menu to bring it here.</p>
+        </div>
+      )}
+      <div ref={board} className="relative will-change-transform" style={{ width, height }}>
         {list.map((moment, index) => {
           const { x, y, rotate } = placement(index);
           const image = momentImage(moment);

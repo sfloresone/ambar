@@ -1,7 +1,7 @@
 // The mock library: believable moments for designing the app before storage and the agent exist. Same
 // contract as the real client (LibraryClient), so the UI never knows the difference. State lives in
 // memory for the session; ask() runs the shared ranking from @ambar/core with a little latency.
-import { answer, isTrashExpired, type Collection, type Kept, type KeepInput, type LibraryClient, type LinkMoment, type Moment } from "@ambar/core";
+import { answer, isTrashExpired, type Collection, type Kept, type KeepInput, type LibraryClient, type LinkMoment, type Moment, type MomentKeeper } from "@ambar/core";
 
 import amberCapture from "../assets/link-captures/amber-640.webp?url";
 import exampleCapture from "../assets/link-captures/example-640.webp?url";
@@ -53,6 +53,7 @@ type Seed = {
   source?: string;
   readings?: string;
   note?: string;
+  keptBy?: MomentKeeper;
   art?: { style: ArtStyle; subtitle?: string; bg: string; fg: string; accent: string; width?: number; height?: number };
   url?: string;
   /** Links: the page's subtitle. */
@@ -96,6 +97,8 @@ function seedToMoment(seed: Seed): Moment {
     id: seed.id,
     createdAt: seed.createdAt,
     sharedWith: [],
+    keptBy: seed.keptBy,
+    onCanvas: seed.collectionIds?.includes("cars") === true,
     title: seed.title,
     topics: seed.topics,
     collectionIds: seed.collectionIds ?? [],
@@ -251,6 +254,18 @@ export function createMockLibrary(): LibraryClient<File> {
     },
     async setCollections(momentId, collectionIds) {
       return update(momentId, (moment) => ({ ...moment, collectionIds }));
+    },
+    async renameMoment(momentId, title) {
+      const trimmed = title.trim();
+
+      if (trimmed === "" || trimmed.length > 200) {
+        throw new Error("Use a title between 1 and 200 characters.");
+      }
+
+      return update(momentId, (moment) => ({ ...moment, title: trimmed }));
+    },
+    async setCanvas(momentId, included) {
+      return update(momentId, (moment) => ({ ...moment, onCanvas: included }));
     },
     async deleteMoment(momentId) {
       return update(momentId, (moment) => ({ ...moment, deletedAt: new Date().toISOString() }));
