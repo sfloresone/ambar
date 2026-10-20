@@ -56,4 +56,9 @@ export const devSections: DevSection[] = [
     title: "Sign-in flow",
     description: "Keep flow: drop, email, 6-digit code or link, keeping, kept. Mock clients.",
   },
+  {
+    slug: "mail",
+    title: "Email template",
+    description: "Preview the sign-in email from the API, including its HTML and plain-text versions.",
+  },
 ];

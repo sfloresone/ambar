@@ -133,7 +133,7 @@ function BestActions({ moment, copied, onOpen }: { moment: Moment; copied: Copie
         ) : null}
       </p>
       <div className="flex flex-wrap gap-2">
-        <Button tone={blocked ? "ink" : "cloud"} size="md" onClick={actions.copy}>
+        <Button tone={blocked ? "ink" : "cloud"} size="md" onClick={() => actions.copy()}>
           <CopyIcon weight="bold" aria-hidden />
           Copy
         </Button>

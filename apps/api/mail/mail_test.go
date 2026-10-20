@@ -2,6 +2,7 @@ package mail
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -101,6 +102,42 @@ func TestTransientFailuresAreRetriedWithTheSameKey(t *testing.T) {
 		if !strings.Contains(body, recipient) || !strings.Contains(body, `"sign_in"`) || !strings.Contains(body, "X-Entity-Ref-ID") {
 			t.Fatalf("body: %s", body)
 		}
+	}
+}
+
+func TestSignInEmailKeepsCodeOutOfSubjectAndPreview(t *testing.T) {
+	code := "123456"
+	html, text, err := renderSignIn(code, "https://app.example/login?verify=t")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if strings.Contains(html[:strings.Index(html, "<table")], code) {
+		t.Fatal("HTML preview contains the sign-in code")
+	}
+	if !strings.Contains(html, "Use this one-time code to sign in to Ambar.") {
+		t.Fatal("HTML preview is missing the neutral sign-in summary")
+	}
+	if !strings.HasPrefix(text, "Use this one-time code to sign in to Ambar.") {
+		t.Fatal("plain-text preview does not begin with the neutral sign-in summary")
+	}
+	if !strings.Contains(html, code) || !strings.Contains(text, code) {
+		t.Fatal("sign-in code is missing from the email body")
+	}
+
+	fake := &fakeResend{responses: []func(http.ResponseWriter){ok}}
+	if err := send(newTestResend(t, fake)); err != nil {
+		t.Fatal(err)
+	}
+
+	var payload struct {
+		Subject string `json:"subject"`
+	}
+	if err := json.Unmarshal([]byte(fake.bodies[0]), &payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.Subject != "Your Ambar sign-in code" || strings.Contains(payload.Subject, code) {
+		t.Fatalf("unexpected subject: %q", payload.Subject)
 	}
 }
 

@@ -75,14 +75,14 @@ export function AppLayout() {
   return (
     <ToastProvider>
       <LibraryProvider client={library} keeper={session ? { name: session.email } : undefined}>
-        <div className="flex min-h-svh flex-col">
+        <div className="flex min-h-svh flex-col has-[[data-moments-split]]:h-dvh has-[[data-moments-split]]:min-h-0">
           {/* Mounted in the same render that sees ?entry=iris, so no frame shows the page uncovered. */}
           {(arrived || isIrisEntry(params)) && <Iris state="opening" onDone={opened} />}
           <header
             ref={header}
             className={cn(
               PILL_HEADER_WRAP,
-              "@container/header",
+              "@container/header shrink-0",
               "transition-[translate,opacity] duration-300 ease-out-soft motion-reduce:transition-[opacity]",
               hidden && "pointer-events-none -translate-y-24 opacity-0 motion-reduce:translate-y-0",
             )}
@@ -120,7 +120,7 @@ export function AppLayout() {
               {session && <GetAmbarMenu container={header} />}
             </div>
           </header>
-          <main className={cn(!fullBleed && APP_FRAME, "flex flex-1 flex-col [&_h1:focus]:outline-hidden", !fullBleed && "py-10 sm:py-14")}>
+          <main className={cn(!fullBleed && APP_FRAME, "flex flex-1 flex-col [&_h1:focus]:outline-hidden", !fullBleed && "py-10 sm:py-14", "has-[[data-moments-split]]:min-h-0")}>
             <Outlet context={{ session, failed, refresh, signOut: signOutAndLeave } satisfies AppContext} />
           </main>
         </div>

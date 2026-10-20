@@ -1,7 +1,7 @@
 // The mock library: believable moments for designing the app before storage and the agent exist. Same
 // contract as the real client (LibraryClient), so the UI never knows the difference. State lives in
 // memory for the session; ask() runs the shared ranking from @ambar/core with a little latency.
-import { answer, isTrashExpired, type Collection, type Kept, type KeepInput, type LibraryClient, type LinkMoment, type Moment, type MomentKeeper } from "@ambar/core";
+import { answer, isTrashExpired, normalizeTags, type Collection, type Kept, type KeepInput, type LibraryClient, type LinkMoment, type Moment, type MomentKeeper } from "@ambar/core";
 
 import amberCapture from "../assets/link-captures/amber-640.webp?url";
 import exampleCapture from "../assets/link-captures/example-640.webp?url";
@@ -212,16 +212,22 @@ export function createMockLibrary(): LibraryClient<File> {
     async keep(input: KeepInput<File>): Promise<Kept> {
       await wait(400);
 
-      const base = { id: crypto.randomUUID(), createdAt: new Date().toISOString(), sharedWith: [], collectionIds: [] };
+      // What the person added while keeping: their tags join the topics, collections and note as given.
+      const tags = normalizeTags(input.tags ?? []);
+      const chosen = input.collectionIds ?? [];
+      const base = { id: crypto.randomUUID(), createdAt: new Date().toISOString(), sharedWith: [], collectionIds: chosen, note: input.note?.trim() || undefined };
+      const withTags = (found: string[]) => [...new Set([...tags, ...found])];
+      // A collection chosen here needs no suggestion afterwards.
+      const offer = (suggestion: Collection | undefined) => (chosen.length > 0 ? undefined : suggestion);
 
       if ("url" in input) {
         const host = new URL(input.url).hostname.replace(/^www\./, "");
         const { topics, suggestion } = suggest(input.url);
-        const moment: Moment = { ...base, kind: "link", url: input.url, title: host, source: host, topics };
+        const moment: Moment = { ...base, kind: "link", url: input.url, title: host, source: host, topics: withTags(topics) };
 
         moments = [moment, ...moments];
 
-        return { moment, suggestion };
+        return { moment, suggestion: offer(suggestion) };
       }
 
       const { file } = input;
@@ -232,18 +238,18 @@ export function createMockLibrary(): LibraryClient<File> {
       let moment: Moment;
 
       if (kind === "photo") {
-        moment = { ...base, kind, mediaUrl: url, width: 0, height: 0, title, topics };
+        moment = { ...base, kind, mediaUrl: url, width: 0, height: 0, title, topics: withTags(topics) };
       } else if (kind === "clip") {
-        moment = { ...base, kind, mediaUrl: url, durationMs: 0, title, topics };
+        moment = { ...base, kind, mediaUrl: url, durationMs: 0, title, topics: withTags(topics) };
       } else {
         const preview = placeholderArt({ style: "page", title, subtitle: file.type || "Document", bg: CLOUD, fg: INK, accent: SKY });
 
-        moment = { ...base, kind: "file", mediaUrl: url, name: file.name, mimeType: file.type, size: file.size, previewUrl: preview, title, topics };
+        moment = { ...base, kind: "file", mediaUrl: url, name: file.name, mimeType: file.type, size: file.size, previewUrl: preview, title, topics: withTags(topics) };
       }
 
       moments = [moment, ...moments];
 
-      return { moment, suggestion };
+      return { moment, suggestion: offer(suggestion) };
     },
     async createCollection(name) {
       const collection: Collection = { id: crypto.randomUUID(), name, createdAt: new Date().toISOString(), tone: (["sky", "leaf", "ink", "cloud"] as const)[collections.length % 4] ?? "sky" };

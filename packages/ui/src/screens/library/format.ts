@@ -1,5 +1,24 @@
 import type { Moment } from "@ambar/core";
 
+const SAVED_DATE = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
+
+const SAVED_TIME = new Intl.DateTimeFormat("en-GB", {
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+/** A kept timestamp in the device's timezone: "20 Oct 2026, 22:23". */
+export function savedDate(iso: string): string {
+  const date = new Date(iso);
+
+  return `${SAVED_DATE.format(date)}, ${SAVED_TIME.format(date)}`;
+}
+
 /** "Today, 09:12", "Apr 14", "Apr 14, 2025". */
 export function shortDate(iso: string, now: Date = new Date()): string {
   const date = new Date(iso);
@@ -47,4 +66,13 @@ export function sourceOf(moment: Moment): string | undefined {
   }
 
   return undefined;
+}
+
+/** A readable address for the details row without the protocol or path. */
+export function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "Website";
+  }
 }

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import type { Collection } from "./collection.ts";
-import { answer, groupByTime, isTrashExpired, matchesFilter, parseTimePhrase, queryWords, TRASH_DAYS, trashDaysLeft } from "./library.ts";
+import { answer, countByKind, filterByKind, groupByTime, isTrashExpired, matchesFilter, normalizeTags, parseTimePhrase, queryWords, suggestTags, TRASH_DAYS, trashDaysLeft } from "./library.ts";
 import type { Moment, PhotoMoment } from "./moment.ts";
 
 // A fixed "now": Thursday 8 October 2026, noon.
@@ -104,5 +104,42 @@ describe("trash", () => {
 
     expect(isTrashExpired(deleted.toISOString(), NOW)).toBe(true);
     expect(isTrashExpired(new Date(deleted.getTime() + 60_000).toISOString(), NOW)).toBe(false);
+  });
+});
+
+describe("suggestTags", () => {
+  const kept = [photo("a", day(2026, 1, 1), { topics: ["Space", "cars"] }), photo("b", day(2026, 1, 2), { topics: ["space"] })];
+
+  test("words from the link first, then the most used topics", () => {
+    expect(suggestTags("https://www.outpacestudios.com/work/branding", kept)).toEqual(["outpacestudios", "work", "branding", "space", "cars"]);
+  });
+
+  test("file names lose their extension; chosen tags and repeats are left out", () => {
+    expect(suggestTags("tiramisu-recipe_2024.jpg", kept, ["Space"])).toEqual(["tiramisu", "recipe", "cars"]);
+  });
+
+  test("never more than the limit", () => {
+    expect(suggestTags("red-green-blue-pink-gold", [], [], 3)).toEqual(["red", "green", "blue"]);
+  });
+});
+
+describe("normalizeTags", () => {
+  test("trimmed, lowercase, no hash, no repeats", () => {
+    expect(normalizeTags([" Agency ", "#agency", "", "Design"])).toEqual(["agency", "design"]);
+  });
+});
+
+describe("countByKind and filterByKind", () => {
+  const link: Moment = { id: "site", kind: "link", createdAt: day(2026, 1, 1), sharedWith: [], topics: [], collectionIds: [], url: "https://example.org" };
+  const mixed = [...moments, link];
+
+  test("counts every kind, with zero for kinds not kept", () => {
+    expect(countByKind(mixed)).toEqual({ photo: 5, clip: 0, link: 1, file: 0 });
+  });
+
+  test("keeps only the chosen kind, in order; all returns the same list", () => {
+    expect(filterByKind(mixed, "link").map((moment) => moment.id)).toEqual(["site"]);
+    expect(filterByKind(mixed, "photo").map((moment) => moment.id)).toEqual(["lumen", "cafe", "orbit", "volt", "today"]);
+    expect(filterByKind(mixed, "all")).toBe(mixed);
   });
 });

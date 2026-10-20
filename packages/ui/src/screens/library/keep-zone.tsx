@@ -1,20 +1,15 @@
-// Keeping things: paste anywhere (an image, a link, a file), drop anywhere, or the "+ Keep" button.
-// Nothing to fill in: Ambar names it, reads it and suggests a collection afterwards.
-import { LinkIcon, PlusIcon, UploadSimpleIcon } from "@phosphor-icons/react";
-import { useEffect, useRef, useState } from "react";
+// Keeping things without a form: paste anywhere (an image, a link, a file) or drop anywhere. Ambar names
+// it, reads it and suggests a collection afterwards. The form, for tags and the rest, is KeepComposer.
+import { useEffect, useState } from "react";
 
-import { buttonVariants } from "../../components/button.tsx";
-import { MenuContent, MenuItem, MenuRoot, MenuTrigger } from "../../components/menu.tsx";
-import { PromptDialog } from "../../components/prompt-dialog.tsx";
 import { useLibrary } from "./library-context.tsx";
-
-const ACCEPT = "image/*,video/*,application/pdf";
 
 function isTyping(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && (target.isContentEditable || ["INPUT", "TEXTAREA"].includes(target.tagName));
 }
 
-function asUrl(text: string): string | null {
+/** An http(s) link from what was pasted or typed, or null. */
+export function asUrl(text: string): string | null {
   try {
     const url = new URL(text.trim());
 
@@ -89,63 +84,4 @@ export function KeepZone() {
       <p className="font-heading text-3xl font-bold">Drop to keep</p>
     </div>
   ) : null;
-}
-
-/** "+ Keep": upload a file or keep a link. */
-export function KeepButton() {
-  const { keep } = useLibrary();
-  const input = useRef<HTMLInputElement>(null);
-  const [askingLink, setAskingLink] = useState(false);
-
-  return (
-    <>
-      <MenuRoot>
-        <MenuTrigger className={buttonVariants({ size: "md", className: "rounded-full" })}>
-          <PlusIcon weight="bold" aria-hidden />
-          Keep
-        </MenuTrigger>
-        <MenuContent align="end" className="min-w-52">
-          <MenuItem onClick={() => input.current?.click()}>
-            <UploadSimpleIcon weight="bold" aria-hidden />
-            Photo, clip or PDF
-          </MenuItem>
-          <MenuItem onClick={() => setAskingLink(true)}>
-            <LinkIcon weight="bold" aria-hidden />
-            A link
-          </MenuItem>
-        </MenuContent>
-      </MenuRoot>
-      <PromptDialog
-        open={askingLink}
-        onOpenChange={setAskingLink}
-        title="Keep a link"
-        label="Link"
-        type="url"
-        placeholder="https://"
-        submitLabel="Keep"
-        onSubmit={(value) => {
-          const url = asUrl(value);
-
-          if (url === null) {
-            return "That doesn't look like a link. It should start with https://";
-          }
-
-          void keep({ url });
-
-          return undefined;
-        }}
-      />
-      <input
-        ref={input}
-        type="file"
-        accept={ACCEPT}
-        multiple
-        hidden
-        onChange={(event) => {
-          [...(event.target.files ?? [])].forEach((file) => void keep({ file }));
-          event.target.value = "";
-        }}
-      />
-    </>
-  );
 }
