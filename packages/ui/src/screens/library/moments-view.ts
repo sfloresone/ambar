@@ -7,6 +7,13 @@ export const MOMENTS_VIEWS = ["2", "3", "4", "list"] as const;
 
 export type MomentsView = (typeof MOMENTS_VIEWS)[number];
 
+/** Maximum density follows the space available to the shared screen. */
+export const MOMENT_COLUMNS = {
+  2: "grid-cols-1 @xl:grid-cols-2",
+  3: "grid-cols-1 @xl:grid-cols-2 @4xl:grid-cols-3",
+  4: "grid-cols-1 @xl:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4",
+} as const;
+
 const KEY = "ambar.moments-view";
 
 function isMomentsView(value: string | null): value is MomentsView {
@@ -18,7 +25,7 @@ export function useMomentsView() {
   const [view, setView] = useState<MomentsView>(() => {
     const saved = readItem(KEY);
 
-    return isMomentsView(saved) ? saved : "4";
+    return isMomentsView(saved) ? saved : "3";
   });
 
   return {

@@ -60,12 +60,18 @@ func newRouter(a *api) http.Handler {
 			r.With(rateLimit(60, time.Hour)).Post("/email/verify", a.handleVerifyEmail)
 			r.Get("/session", a.handleGetSession)
 			r.Delete("/session", a.handleSignOut)
-			// Browser navigations, not fetches: the state cookie is the CSRF check (docs/decisions/0005).
 			r.Get("/providers", a.handleProviders)
-			r.Get("/identities", a.handleIdentities)
-			r.Delete("/identities/{provider}", a.handleUnlinkIdentity)
+			// Browser navigations, not fetches: the state cookie is the CSRF check (docs/decisions/0005).
 			r.With(rateLimit(60, time.Hour)).Get("/oauth/{provider}", a.handleOAuthStart)
 			r.With(rateLimit(60, time.Hour)).Get("/oauth/{provider}/callback", a.handleOAuthCallback)
+		})
+
+		// Private: everything that reads or changes an account's data goes in this group, never outside it.
+		r.Group(func(r chi.Router) {
+			r.Use(a.authenticated)
+
+			r.Get("/auth/identities", a.handleIdentities)
+			r.Delete("/auth/identities/{provider}", a.handleUnlinkIdentity)
 		})
 	})
 

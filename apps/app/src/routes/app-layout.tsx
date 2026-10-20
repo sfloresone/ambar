@@ -1,4 +1,3 @@
-import { buttonVariants } from "@ambar/ui/components/button";
 import { GetAmbarMenu } from "@ambar/ui/components/get-ambar-menu";
 import { IRIS_ENTRY, Iris, isIrisEntry } from "@ambar/ui/components/iris";
 import { ToastProvider, Toaster } from "@ambar/ui/components/toaster";
@@ -12,9 +11,9 @@ import { LibraryProvider } from "@ambar/ui/screens/library/library-context";
 import { useSearchShortcut } from "@ambar/ui/screens/library/search-palette";
 import { FoldersIcon, FrameCornersIcon, ImagesIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate, useSearchParams } from "react-router";
+import { Link, NavLink, Outlet, useNavigate, useSearchParams } from "react-router";
 
-import { apiUrl } from "../api-url.ts";
+import { apiUrl, siteUrl } from "../api-url.ts";
 import { MomentViewerHost } from "../moment-viewer-host.tsx";
 import { useFullBleed } from "../route-handle.ts";
 import { SearchHost } from "../search-host.tsx";
@@ -31,31 +30,22 @@ export function AppLayout() {
   const [arrived, setArrived] = useState(arrivingThroughIris);
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
-  const { pathname } = useLocation();
   const fullBleed = useFullBleed();
   // Steps aside while content is in use; on the Canvas it also hides when left alone.
   const { hidden, ref: header } = useAutoHide({ idleMs: fullBleed ? 2500 : undefined });
   const [searching, setSearching] = useState(false);
 
   useSearchShortcut(useCallback(() => setSearching(true), []));
-  // Read once here; /login calls refresh() after signing in, sign out updates it directly.
-  const { session, refresh, signOut } = useSession(apiUrl);
+  // Read once here; /login calls refresh() after signing in, sign out updates it directly. Which routes
+  // need it is the router's call (RequireSession), not this layout's.
+  const { session, failed, refresh, signOut } = useSession(apiUrl);
   // Mock data and a simulated agent until the API serves the library; same contract as the real client.
   const [library] = useState(createMockLibrary);
 
+  // Signed out, back to the public site (replacing this page, so Back doesn't return to the library).
   async function signOutAndLeave() {
     await signOut();
-    navigate("/login", { replace: true });
-  }
-
-  // Everything but /login is private: signed out lands on /login, and nothing renders while the session loads.
-  const onLogin = pathname === "/login";
-  let page: ReactNode = <Outlet context={{ session, refresh, signOut: signOutAndLeave } satisfies AppContext} />;
-
-  if (!onLogin && session === null) {
-    page = <Navigate to="/login" replace />;
-  } else if (!onLogin && session === undefined) {
-    page = null;
+    window.location.replace(siteUrl);
   }
 
   // The first route is rendered: swap the static cover for the Iris (identical first frame) and open it.
@@ -84,7 +74,7 @@ export function AppLayout() {
 
   return (
     <ToastProvider>
-      <LibraryProvider client={library}>
+      <LibraryProvider client={library} keeper={session ? { name: session.email } : undefined}>
         <div className="flex min-h-svh flex-col">
           {/* Mounted in the same render that sees ?entry=iris, so no frame shows the page uncovered. */}
           {(arrived || isIrisEntry(params)) && <Iris state="opening" onDone={opened} />}
@@ -92,11 +82,12 @@ export function AppLayout() {
             ref={header}
             className={cn(
               PILL_HEADER_WRAP,
+              "@container/header",
               "transition-[translate,opacity] duration-300 ease-out-soft motion-reduce:transition-[opacity]",
               hidden && "pointer-events-none -translate-y-24 opacity-0 motion-reduce:translate-y-0",
             )}
           >
-            <div className={cn(PILL_HEADER, "gap-2 pl-4 sm:gap-4", session && "pl-2.5")}>
+            <div className={cn(PILL_HEADER, "gap-1 pl-4 sm:gap-4", session && "pl-2.5")}>
               {session && (
                 <UserMenu
                   container={header}
@@ -106,7 +97,7 @@ export function AppLayout() {
                   onSignOut={signOutAndLeave}
                 />
               )}
-              <Link to="/" className={cn(PILL_BRAND, "mr-1 sm:mr-3")}>
+              <Link to="/" className={cn(PILL_BRAND, "mr-0 sm:mr-3")}>
                 Ambar
               </Link>
               <nav aria-label="Sections" className="flex text-sm">
@@ -120,26 +111,21 @@ export function AppLayout() {
                   Canvas
                 </Section>
               </nav>
-              <button type="button" onClick={() => setSearching(true)} className={cn(PILL_LINK, "flex items-center gap-2")}>
+              <button type="button" onClick={() => setSearching(true)} className={cn(PILL_LINK, "flex items-center gap-2 px-2 sm:px-3.5")}>
                 <MagnifyingGlassIcon weight="bold" aria-hidden className="size-4" />
                 <span className="sr-only">Search</span>
                 {/* Visible shortcut, part of the name: "Search ⌘K". */}
                 <kbd className="hidden rounded-md border px-1.5 font-sans text-xs md:inline">⌘K</kbd>
               </button>
-              {/* Nothing while the session loads, so a signed-in user never sees "Sign in" flash. */}
-              {session === null && (
-                <Link to="/login" className={buttonVariants({ tone: "cloud", size: "sm", className: "rounded-full" })}>
-                  Sign in
-                </Link>
-              )}
               {session && <GetAmbarMenu container={header} />}
             </div>
           </header>
           <main className={cn(!fullBleed && APP_FRAME, "flex flex-1 flex-col [&_h1:focus]:outline-hidden", !fullBleed && "py-10 sm:py-14")}>
-            {page}
+            <Outlet context={{ session, failed, refresh, signOut: signOutAndLeave } satisfies AppContext} />
           </main>
         </div>
-        <MomentViewerHost />
+        {/* The viewer (?m= on any route) and the search show the library: only with a session. */}
+        {session && <MomentViewerHost />}
         {session && <SearchHost open={searching} onOpenChange={setSearching} />}
         <Toaster />
       </LibraryProvider>
@@ -157,7 +143,7 @@ type SectionProps = {
 /** A section in the pill: icon and label (label hidden on narrow screens, still named for screen readers). */
 function Section({ to, end, icon, children }: SectionProps) {
   return (
-    <NavLink to={to} end={end} aria-label={children} className={cn(PILL_LINK, "flex items-center gap-1.5 px-2.5 sm:px-3 [&_svg]:size-4")}>
+    <NavLink to={to} end={end} aria-label={children} className={cn(PILL_LINK, "flex items-center gap-1.5 px-2 sm:px-3 [&_svg]:size-4")}>
       {icon}
       <span aria-hidden className="hidden sm:inline">
         {children}

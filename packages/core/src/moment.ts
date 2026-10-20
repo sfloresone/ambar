@@ -1,11 +1,20 @@
 /** Kinds of moment Ambar can keep. */
 export type MomentKind = "photo" | "clip" | "link" | "file";
 
+/** The person who kept a moment, separate from the people it is shared with. */
+export type MomentKeeper = {
+  name: string;
+  avatarUrl?: string;
+};
+
 type MomentBase = {
   id: string;
   createdAt: string;
   /** User ids the owner chose to share this moment with. Empty means private. */
   sharedWith: string[];
+  keptBy?: MomentKeeper;
+  /** Selected for the person's Canvas. */
+  onCanvas?: boolean;
   note?: string;
   /** Shown on cards: the link's title, the file's name, or what Ambar read in the image. */
   title?: string;

@@ -32,6 +32,8 @@ export interface LibraryClient<TFile extends MomentFile = MomentFile> {
   keep(input: KeepInput<TFile>): Promise<Kept>;
   createCollection(name: string): Promise<Collection>;
   setCollections(momentId: string, collectionIds: string[]): Promise<Moment>;
+  renameMoment(momentId: string, title: string): Promise<Moment>;
+  setCanvas(momentId: string, included: boolean): Promise<Moment>;
   /** Moves it to the Trash; it can be restored for TRASH_DAYS. */
   deleteMoment(momentId: string): Promise<Moment>;
   restoreMoment(momentId: string): Promise<Moment>;

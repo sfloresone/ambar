@@ -1,7 +1,7 @@
 // "Get Ambar": the other places Ambar lives (extension, mobile, desktop), from @ambar/core PLATFORMS.
 // Not available yet = visible but disabled, with its status; with a downloadUrl it becomes a link.
 import { PLATFORMS, type PlatformId } from "@ambar/core";
-import { CaretDownIcon, DesktopIcon, DeviceMobileIcon, GlobeIcon, PuzzlePieceIcon, type Icon } from "@phosphor-icons/react";
+import { CaretDownIcon, DesktopIcon, DeviceMobileIcon, DownloadSimpleIcon, GlobeIcon, PuzzlePieceIcon, type Icon } from "@phosphor-icons/react";
 
 import { cn } from "../lib/utils.ts";
 import { buttonVariants } from "./button.tsx";
@@ -20,9 +20,10 @@ const ELSEWHERE = PLATFORMS.filter((platform) => platform.id !== "web");
 export function GetAmbarMenu({ container }: { container?: MenuContainer }) {
   return (
     <MenuRoot>
-      <MenuTrigger className={buttonVariants({ tone: "cloud", size: "sm", className: "group rounded-full" })}>
-        Get Ambar
-        <CaretDownIcon weight="bold" aria-hidden className="transition-transform duration-200 ease-out-soft group-data-popup-open:rotate-180 motion-reduce:transition-none" />
+      <MenuTrigger aria-label="Get Ambar" className={buttonVariants({ tone: "cloud", size: "sm", className: "group rounded-full @max-md/header:size-9 @max-md/header:px-0" })}>
+        <span className="@max-md/header:sr-only">Get Ambar</span>
+        <DownloadSimpleIcon weight="bold" aria-hidden className="hidden @max-md/header:block" />
+        <CaretDownIcon weight="bold" aria-hidden className="transition-transform duration-200 ease-out-soft group-data-popup-open:rotate-180 motion-reduce:transition-none @max-md/header:hidden" />
       </MenuTrigger>
       <MenuContent align="end" container={container} className="w-80">
         {ELSEWHERE.map((platform) => {
