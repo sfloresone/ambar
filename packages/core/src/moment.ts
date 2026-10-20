@@ -1,5 +1,7 @@
-/** Kinds of moment Ambar can keep. */
-export type MomentKind = "photo" | "clip" | "link" | "file";
+/** Kinds of moment Ambar can keep, in the order every client lists them. */
+export const MOMENT_KINDS = ["photo", "clip", "link", "file"] as const;
+
+export type MomentKind = (typeof MOMENT_KINDS)[number];
 
 /** The person who kept a moment, separate from the people it is shared with. */
 export type MomentKeeper = {

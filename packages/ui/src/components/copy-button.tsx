@@ -1,22 +1,22 @@
-// Copies a link and confirms it. Adapted from opensourceui "Copy to Clipboard" (MIT).
+// Copies a value or runs a platform action, then confirms the result inline. Adapted from opensourceui "Copy to Clipboard" (MIT).
 import { cn } from "../lib/utils.ts";
 import { CheckIcon, LinkSimpleIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState, type ComponentProps } from "react";
 
 import { PRESS_ACTIVE, TACTILE_BASE, TONE } from "../lib/tactile.ts";
 
-type CopyButtonProps = Omit<ComponentProps<"button">, "value" | "children"> & {
-  value: string;
+type CopyButtonProps = Omit<ComponentProps<"button">, "value" | "children" | "onClick"> & {
   label?: string;
   copiedLabel?: string;
-};
+  failedLabel?: string;
+} & ({ value: string; onCopy?: never } | { value?: never; onCopy: () => Promise<boolean | void> });
 
 const RESET_MS = 1600;
 
 const LAYER = "col-start-1 row-start-1 transition-opacity duration-200 motion-reduce:transition-none";
 
-export function CopyButton({ value, label = "Copy link", copiedLabel = "Copied", className, ...props }: CopyButtonProps) {
-  const [copied, setCopied] = useState(false);
+export function CopyButton({ value, onCopy, label = "Copy link", copiedLabel = "Copied", failedLabel = "Couldn't copy", className, ...props }: CopyButtonProps) {
+  const [status, setStatus] = useState<"copied" | "failed" | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -29,19 +29,26 @@ export function CopyButton({ value, label = "Copy link", copiedLabel = "Copied",
 
   async function copy() {
     try {
-      await navigator.clipboard.writeText(value);
-    } catch {
-      // Clipboard can be blocked (insecure context, permissions); the label still confirms the intent.
-    }
+      const result = onCopy === undefined ? await navigator.clipboard.writeText(value) : await onCopy();
 
-    setCopied(true);
+      if (result === false) {
+        setStatus("failed");
+      } else {
+        setStatus("copied");
+      }
+    } catch {
+      setStatus("failed");
+    }
 
     if (timer.current !== null) {
       clearTimeout(timer.current);
     }
 
-    timer.current = setTimeout(() => setCopied(false), RESET_MS);
+    timer.current = setTimeout(() => setStatus(null), RESET_MS);
   }
+
+  const copied = status === "copied";
+  const feedback = copied ? copiedLabel : status === "failed" ? failedLabel : "";
 
   return (
     <button
@@ -57,15 +64,15 @@ export function CopyButton({ value, label = "Copy link", copiedLabel = "Copied",
         <CheckIcon weight="bold" aria-hidden className={cn(LAYER, "text-leaf", !copied && "opacity-0")} />
       </span>
       <span className="grid">
-        <span aria-hidden={copied} className={cn(LAYER, copied && "opacity-0")}>
+        <span aria-hidden={status !== null} className={cn(LAYER, status !== null && "opacity-0")}>
           {label}
         </span>
-        <span aria-hidden={!copied} className={cn(LAYER, "text-leaf", !copied && "opacity-0")}>
-          {copiedLabel}
+        <span aria-hidden={status === null} className={cn(LAYER, copied ? "text-leaf" : "text-destructive", status === null && "opacity-0")}>
+          {feedback}
         </span>
       </span>
       <span className="sr-only" aria-live="polite">
-        {copied ? copiedLabel : ""}
+        {feedback}
       </span>
     </button>
   );

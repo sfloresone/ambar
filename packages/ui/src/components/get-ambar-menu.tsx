@@ -1,18 +1,12 @@
 // "Get Ambar": the other places Ambar lives (extension, mobile, desktop), from @ambar/core PLATFORMS.
 // Not available yet = visible but disabled, with its status; with a downloadUrl it becomes a link.
-import { PLATFORMS, type PlatformId } from "@ambar/core";
-import { CaretDownIcon, DesktopIcon, DeviceMobileIcon, DownloadSimpleIcon, GlobeIcon, PuzzlePieceIcon, type Icon } from "@phosphor-icons/react";
+import { PLATFORMS } from "@ambar/core";
+import { CaretDownIcon, DownloadSimpleIcon } from "@phosphor-icons/react";
 
+import { PLATFORM_ICONS } from "../lib/platform-icons.ts";
 import { cn } from "../lib/utils.ts";
 import { buttonVariants } from "./button.tsx";
 import { MenuContent, type MenuContainer, MenuItem, MenuLinkItem, MenuRoot, MenuTrigger } from "./menu.tsx";
-
-const ICONS: Record<PlatformId, Icon> = {
-  web: GlobeIcon,
-  extension: PuzzlePieceIcon,
-  mobile: DeviceMobileIcon,
-  desktop: DesktopIcon,
-};
 
 /** Everything except the web app, which is where this menu lives. */
 const ELSEWHERE = PLATFORMS.filter((platform) => platform.id !== "web");
@@ -27,7 +21,7 @@ export function GetAmbarMenu({ container }: { container?: MenuContainer }) {
       </MenuTrigger>
       <MenuContent align="end" container={container} className="w-80">
         {ELSEWHERE.map((platform) => {
-          const PlatformIcon = ICONS[platform.id];
+          const PlatformIcon = PLATFORM_ICONS[platform.id];
 
           const content = (
             <>

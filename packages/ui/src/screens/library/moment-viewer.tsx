@@ -77,7 +77,7 @@ function ViewerContent({ moment, onClose }: { moment: Moment; onClose: () => voi
         </header>
 
         <div className="flex flex-wrap gap-2">
-          <Button size="md" onClick={actions.copy}>
+          <Button size="md" onClick={() => actions.copy()}>
             <CopyIcon weight="bold" aria-hidden />
             Copy
           </Button>

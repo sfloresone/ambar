@@ -1,177 +1,265 @@
-// The list view: titles only on the left, the selected moment large on the right. Nothing previews until
-// it is chosen. Links show their saved capture; "Browse page" swaps in the live page (sandboxed), only on
-// request and only one at a time. Sites that can't be framed (the server says so in `embed`) keep their
-// capture and open in the browser. Narrow spaces get the titles alone, and a tap opens the viewer.
-//
-// The list is an ARIA listbox (custom rows); selection follows focus, and the keyboard is handled by the
-// listbox (arrows, Home/End, Enter).
-/* oxlint-disable jsx-a11y/prefer-tag-over-role, jsx-a11y/click-events-have-key-events -- custom listbox, see above. */
+// A single-selection listbox with a fixed preview in wide containers. Only the left column scrolls.
+// Rows are revealed in batches; all metadata remains available to search and the other library views.
+/* oxlint-disable jsx-a11y/prefer-tag-over-role, jsx-a11y/click-events-have-key-events -- custom listbox with arrow-key navigation and selection following focus. */
 import { momentLabel, type LinkMoment, type Moment } from "@ambar/core";
-import { ArrowSquareOutIcon, CopyIcon, PlayIcon, XIcon } from "@phosphor-icons/react";
-import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type RefObject } from "react";
+import { ArrowSquareOutIcon, DownloadSimpleIcon, FrameCornersIcon, ImageIcon, PencilSimpleIcon, PlayIcon, TrashIcon, XIcon } from "@phosphor-icons/react";
+import { useLayoutEffect, useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 
 import { Button } from "../../components/button.tsx";
+import { CopyButton } from "../../components/copy-button.tsx";
+import { SkeletonBlock } from "../../components/skeleton-swap.tsx";
 import { cn } from "../../lib/utils.ts";
-import { sourceOf } from "./format.ts";
+import { useLibrary } from "./library-context.tsx";
+import { EditMomentDialog } from "./edit-moment-dialog.tsx";
+import { hostOf, savedDate, sourceOf } from "./format.ts";
 import { useMomentActions } from "./moment-actions.tsx";
+import { MomentKeeperDock } from "./moment-keeper.tsx";
+import { useMomentBatches } from "./use-moment-batches.ts";
 
-/** From this container width the preview sits beside the list (48 rem). */
-const SPLIT_PX = 768;
-
-/** After this, a live page that hasn't loaded says so and offers the browser. */
 const SLOW_MS = 8000;
 
-/** Whether the element is wide enough for the split, kept in sync with its size. */
-function useWide(ref: RefObject<HTMLElement | null>): boolean {
-  const [wide, setWide] = useState(false);
+const SPLIT_COLUMNS = "grid-cols-[minmax(0,0.45fr)_minmax(0,0.55fr)]";
 
-  useEffect(() => {
-    const element = ref.current;
+const byNewest = (a: Moment, b: Moment) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || a.id.localeCompare(b.id);
 
-    if (element === null) {
-      return;
-    }
+/** Keep keyboard focus visible without moving the document or the preview. */
+function focusRow(row: HTMLElement | undefined, scroll: HTMLElement | null) {
+  row?.focus({ preventScroll: true });
 
-    const observer = new ResizeObserver(([entry]) => setWide((entry?.contentRect.width ?? 0) >= SPLIT_PX));
+  if (row === undefined) return;
 
-    observer.observe(element);
+  if (scroll === null) {
+    row.scrollIntoView({ block: "nearest" });
 
-    return () => observer.disconnect();
-  }, [ref]);
+    return;
+  }
 
-  return wide;
+  const bounds = row.getBoundingClientRect();
+  const viewport = scroll.getBoundingClientRect();
+
+  if (bounds.top < viewport.top) scroll.scrollTop += bounds.top - viewport.top;
+
+  if (bounds.bottom > viewport.bottom) scroll.scrollTop += bounds.bottom - viewport.bottom;
 }
-
-const byNewest = (a: Moment, b: Moment) => Date.parse(b.createdAt) - Date.parse(a.createdAt);
 
 type MomentListProps = {
   moments: Moment[];
-  /** Opens the full viewer. */
+  split: boolean;
   onOpen: (moment: Moment) => void;
 };
 
-export function MomentList({ moments, onOpen }: MomentListProps) {
-  const root = useRef<HTMLDivElement>(null);
-  const wide = useWide(root);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  // Newest first: the order on screen is the order the keyboard follows.
-  const ordered = moments.toSorted(byNewest);
-  const selected = ordered.find((moment) => moment.id === selectedId) ?? ordered[0];
+export function MomentList({ moments, split, onOpen }: MomentListProps) {
+  const { keeper } = useLibrary();
+  const scroll = useRef<HTMLDivElement>(null);
+  const rows = useRef(new Map<string, HTMLDivElement>());
+  const focusedId = useRef<string | null>(null);
+  const [selection, setSelection] = useState<{ id?: string; index: number }>({ index: 0 });
+  const ordered = useMemo(() => moments.toSorted(byNewest), [moments]);
+  const found = ordered.findIndex((moment) => moment.id === selection.id);
+  const index = found >= 0 ? found : Math.min(selection.index, ordered.length - 1);
+  const selected = ordered[index];
+  const { count, hasMore, sentinel, loadMore } = useMomentBatches(ordered.length, index + 1, scroll, split);
+  const visible = ordered.slice(0, count);
 
-  function select(moment: Moment | undefined, focus: boolean) {
-    if (moment === undefined) {
-      return;
+  // Keep the same ID through inserts and renames; a removed selection falls to its nearest neighbour.
+  if (selected !== undefined && (selection.id !== selected.id || selection.index !== index)) {
+    setSelection({ id: selected.id, index });
+  }
+
+  useLayoutEffect(() => {
+    if (focusedId.current !== null && !rows.current.has(focusedId.current) && document.activeElement === document.body && selected !== undefined) {
+      focusRow(rows.current.get(selected.id), split ? scroll.current : null);
     }
+  }, [selected, moments, split]);
 
-    setSelectedId(moment.id);
+  function select(moment: Moment, focus = false) {
+    setSelection({ id: moment.id, index: ordered.indexOf(moment) });
 
     if (focus) {
-      root.current?.querySelector<HTMLElement>(`[data-moment-id="${moment.id}"]`)?.focus();
+      focusRow(rows.current.get(moment.id), split ? scroll.current : null);
     }
   }
 
   function keyDown(event: KeyboardEvent<HTMLDivElement>) {
-    const index = selected === undefined ? -1 : ordered.indexOf(selected);
-    const target = { ArrowDown: index + 1, ArrowUp: index - 1, Home: 0, End: ordered.length - 1 }[event.key];
+    const target = { ArrowDown: index + 1, ArrowUp: index - 1, Home: 0, End: count - 1 }[event.key];
 
     if (target !== undefined) {
       event.preventDefault();
-      select(ordered[Math.max(0, Math.min(ordered.length - 1, target))], true);
-    } else if (event.key === "Enter" && selected !== undefined) {
+      const moment = ordered[Math.max(0, Math.min(count - 1, target))];
+
+      if (moment !== undefined) select(moment, true);
+    } else if ((event.key === "Enter" || event.key === " ") && selected !== undefined) {
       event.preventDefault();
       onOpen(selected);
     }
   }
 
   return (
-    // The list keeps a readable column (15–22 rem, about a quarter); the preview takes the rest. Both and
-    // the gutter between them scale with the space, so resizing never jumps.
-    <div ref={root} className={cn("grid gap-gutter", wide && "grid-cols-[clamp(15rem,24%,22rem)_minmax(0,1fr)]")}>
-      <div role="listbox" aria-label="Moments" tabIndex={-1} onKeyDown={keyDown} className="flex min-w-0 flex-col gap-0.5 self-start outline-hidden">
-        {ordered.map((moment) => (
-          <div
-            key={moment.id}
-            role="option"
-            aria-selected={moment.id === selected?.id}
-            tabIndex={moment.id === selected?.id ? 0 : -1}
-            data-moment-id={moment.id}
-            onClick={() => (wide ? select(moment, false) : onOpen(moment))}
-            onDoubleClick={() => onOpen(moment)}
-            onFocus={() => wide && select(moment, false)}
-            className={cn(
-              "cursor-pointer truncate rounded-lg px-3 py-2 text-sm text-muted-foreground outline-hidden transition-colors duration-150 motion-reduce:transition-none",
-              "hover:bg-muted/60 hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-solid focus-visible:outline-ring",
-              moment.id === selected?.id && "bg-muted font-medium text-foreground",
-            )}
-          >
-            {momentLabel(moment)}
-          </div>
-        ))}
-      </div>
-
-      {wide && selected !== undefined && (
-        // A new key per moment: changing the selection fades the next one in and always leaves a live page.
-        <aside
-          key={selected.id}
-          aria-label="Selected moment"
-          className="sticky top-24 flex h-[calc(100dvh-12rem)] min-h-[32rem] min-w-0 animate-in flex-col gap-5 self-start duration-200 fade-in motion-reduce:animate-none"
+    <div data-slot="moment-list" className={cn("@container/moment-list grid min-h-0 min-w-0 gap-gutter", split && ["h-full", SPLIT_COLUMNS])}>
+      <div ref={scroll} data-slot="moment-list-scroll" className={cn("min-h-0 min-w-0", split && "overflow-y-auto overscroll-contain pr-2 [scrollbar-gutter:stable]")}>
+        <div
+          role="listbox"
+          aria-label="Moments"
+          tabIndex={-1}
+          onKeyDown={keyDown}
+          onBlur={(event) => {
+            if (event.relatedTarget !== null && !event.currentTarget.contains(event.relatedTarget)) focusedId.current = null;
+          }}
+          className="flex min-w-0 flex-col gap-0.5 outline-hidden"
         >
-          <PreviewFrame moment={selected} />
-          <Details moment={selected} />
+          {visible.map((moment, position) => (
+            <div
+              key={moment.id}
+              ref={(element) => {
+                if (element === null) rows.current.delete(moment.id);
+                else rows.current.set(moment.id, element);
+              }}
+              role="option"
+              aria-selected={moment.id === selected?.id}
+              aria-posinset={position + 1}
+              aria-setsize={ordered.length}
+              tabIndex={moment.id === selected?.id ? 0 : -1}
+              data-moment-id={moment.id}
+              onClick={() => {
+                select(moment);
+
+                if (!split) onOpen(moment);
+              }}
+              onDoubleClick={() => split && onOpen(moment)}
+              onFocus={() => {
+                focusedId.current = moment.id;
+                select(moment);
+              }}
+              className={cn(
+                "grid min-h-11 cursor-pointer items-center gap-x-3 gap-y-0.5 rounded-xl px-3 py-2 text-sm text-muted-foreground outline-hidden transition-colors duration-150 motion-reduce:transition-none",
+                split ? "grid-cols-[4rem_minmax(0,1.4fr)_2.5rem_minmax(0,0.6fr)_9rem]" : "grid-cols-[4rem_minmax(0,1.2fr)_2.5rem_minmax(0,0.8fr)] @xl/moment-list:grid-cols-[4rem_minmax(0,1.4fr)_2.5rem_minmax(0,0.6fr)_9rem]",
+                "hover:bg-muted/60 hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-solid focus-visible:outline-ring",
+                moment.id === selected?.id && "bg-muted font-medium text-foreground",
+              )}
+            >
+              <MomentKindIndicator moment={moment} className={cn(!split && "row-span-2 @xl/moment-list:row-span-1")} />
+              <span title={momentLabel(moment)} className="min-w-0 flex-1 truncate">{momentLabel(moment)}</span>
+              <MomentKeeperDock keeper={moment.keptBy ?? keeper} compact className={cn("justify-self-center", !split && "row-span-2 @xl/moment-list:row-span-1")} />
+              <time dateTime={moment.createdAt} className={cn("w-36 whitespace-nowrap text-xs font-normal text-muted-foreground tabular-nums", split ? "col-start-5 text-right" : "col-start-2 @xl/moment-list:col-start-5 @xl/moment-list:text-right")}>
+                {savedDate(moment.createdAt)}
+              </time>
+            </div>
+          ))}
+        </div>
+        <div ref={sentinel} className="flex flex-col items-center gap-2 px-2 py-5">
+          <Button tone="cloud" size="sm" aria-disabled={!hasMore} onClick={() => hasMore && loadMore()}>
+            {hasMore ? "Load more" : "All moments loaded"}
+          </Button>
+          <p role="status" className="relative text-xs text-muted-foreground tabular-nums">
+            {!hasMore && <span className="sr-only">All moments loaded. </span>}
+            {count} of {ordered.length} moments
+          </p>
+        </div>
+      </div>
+      {split && selected !== undefined && (
+        <aside aria-label="Selected moment" className="min-h-0 min-w-0 overflow-y-auto overscroll-contain px-1 pb-1 [scrollbar-gutter:stable]">
+          <div key={selected.id} className="mx-auto flex w-full max-w-[50rem] flex-col gap-5">
+            <PreviewFrame moment={selected} />
+            <Details moment={selected} onTrash={() => { focusedId.current = selected.id; }} />
+          </div>
         </aside>
       )}
     </div>
   );
 }
 
-/** The selected moment in a frame: a slim bar over its media. Links can be browsed live, on request. */
-function PreviewFrame({ moment }: { moment: Moment }) {
-  const actions = useMomentActions(moment);
-  const [browsing, setBrowsing] = useState(false);
-  const embed = moment.kind === "link" ? moment.embed : undefined;
-  const source = sourceOf(moment) ?? momentLabel(moment);
+function MomentKindIndicator({ moment, className }: { moment: Moment; className?: string }) {
+  const badge = {
+    photo: { label: "IMAGE", color: "bg-leaf text-cloud" },
+    clip: { label: "VIDEO", color: "bg-sky text-ink" },
+    link: { label: "URL", color: "border border-sky-deep/30 bg-cloud text-sky-deep" },
+    file: { label: "PDF", color: "bg-muted text-muted-foreground" },
+  }[moment.kind];
 
   return (
-    <section aria-label="Preview" className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border bg-card shadow-[0_1px_2px_rgb(20_20_20/0.05),0_12px_32px_rgb(20_20_20/0.07)]">
-      <div className="flex h-12 shrink-0 items-center gap-2.5 border-b px-3">
-        <span aria-hidden className="grid size-6 shrink-0 place-items-center rounded-md bg-muted font-heading text-xs font-bold uppercase">
-          {source.charAt(0)}
-        </span>
-        <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{source}</span>
-        {embed !== undefined &&
-          (browsing ? (
-            <Button tone="ink" size="sm" onClick={() => setBrowsing(false)}>
-              <XIcon weight="bold" aria-hidden />
-              Exit
-            </Button>
-          ) : (
-            <Button tone="cloud" size="sm" onClick={() => setBrowsing(true)}>
-              {embed.kind === "player" && <PlayIcon weight="fill" aria-hidden />}
-              {embed.kind === "player" ? "Play" : "Browse page"}
-            </Button>
-          ))}
-        <Button tone="cloud" size="icon-sm" onClick={actions.copy} aria-label={moment.kind === "link" ? "Copy link" : "Copy"} title="Copy">
-          <CopyIcon weight="bold" />
-        </Button>
-        <Button tone="cloud" size="icon-sm" onClick={actions.open} aria-label="Open original" title="Open original">
-          <ArrowSquareOutIcon weight="bold" />
-        </Button>
+    <span className={cn("inline-flex h-6 w-16 items-center justify-center rounded-full px-2 text-[10px] font-semibold tracking-[0.06em]", badge.color, className)}>
+      {badge.label}
+    </span>
+  );
+}
+
+/** A list-shaped placeholder with the same panel geometry, rather than a grid of cards. */
+export function LoadingMomentList({ split }: { split: boolean }) {
+  return (
+    <div className={cn("grid h-full min-h-0 gap-gutter overflow-hidden", split && SPLIT_COLUMNS)}>
+      <div className="flex flex-col gap-0.5">
+        {Array.from({ length: 12 }, (_, index) => (
+          <div
+            key={index}
+            className={cn(
+              "grid min-h-11 shrink-0 grid-cols-[4rem_minmax(0,1.2fr)_2.5rem_minmax(0,0.8fr)] items-center gap-x-3 gap-y-0.5 px-3 py-2",
+              split && "grid-cols-[4rem_minmax(0,1.4fr)_2.5rem_minmax(0,0.6fr)_9rem]",
+              !split && "@xl/moment-list:grid-cols-[4rem_minmax(0,1.4fr)_2.5rem_minmax(0,0.6fr)_9rem]",
+            )}
+          >
+            <SkeletonBlock className="h-6 w-16 rounded-full" />
+            <SkeletonBlock className={index % 3 === 0 ? "h-3 w-2/5" : "h-3 w-3/5"} />
+            <SkeletonBlock className="size-8 justify-self-center rounded-full" />
+            <SkeletonBlock className={cn("hidden h-2.5 w-36", split ? "col-start-5 block" : "col-start-2 @xl/moment-list:col-start-5 @xl/moment-list:block")} />
+          </div>
+        ))}
       </div>
-      <div className="relative min-h-0 flex-1 bg-muted">
+      {split && (
+        <div className="mx-auto flex w-full max-w-[50rem] flex-col gap-5">
+          <SkeletonBlock className="aspect-video max-h-[45dvh] shrink-0 rounded-2xl" />
+          <SkeletonBlock className="h-6 w-2/5" />
+          <div className="flex flex-col gap-4 border-t pt-5">
+            <SkeletonBlock className="h-3 w-24" />
+            <SkeletonBlock className="h-3 w-full" />
+            <SkeletonBlock className="h-3 w-full" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PreviewFrame({ moment }: { moment: Moment }) {
+  const [browsing, setBrowsing] = useState(false);
+  const embed = moment.kind === "link" ? moment.embed : undefined;
+
+  return (
+    <section aria-label="Preview" className="relative aspect-video max-h-[45dvh] w-full shrink-0 rounded-2xl border border-border/60 bg-card p-2 shadow-sm">
+      <div className="relative size-full overflow-hidden rounded-xl bg-muted/35">
         {browsing && moment.kind === "link" ? <LivePage moment={moment} /> : <SavedMedia moment={moment} />}
       </div>
+      {embed !== undefined && (
+        <Button tone="cloud" size="sm" className="absolute right-4 bottom-4" onClick={() => setBrowsing(!browsing)}>
+          {browsing ? <XIcon weight="bold" aria-hidden /> : embed.kind === "player" ? <PlayIcon weight="fill" aria-hidden /> : null}
+          {browsing ? "Exit" : embed.kind === "player" ? "Play" : "Browse page"}
+        </Button>
+      )}
     </section>
   );
 }
 
-/** What was kept: the capture of a link, or the photo, clip or document's first page. */
+function PreviewImage({ src, alt }: { src?: string; alt: string }) {
+  const [failed, setFailed] = useState(false);
+
+  if (src === undefined || src === "" || failed) {
+    return (
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center text-sm text-muted-foreground">
+        <ImageIcon aria-hidden className="size-8" />
+        Preview unavailable
+      </div>
+    );
+  }
+
+  return <img src={src} alt={alt} onError={() => setFailed(true)} className="absolute inset-0 size-full object-contain" />;
+}
+
 function SavedMedia({ moment }: { moment: Moment }) {
   switch (moment.kind) {
     case "link":
       return (
         <>
-          {moment.imageUrl !== undefined && <img src={moment.imageUrl} alt="" className="absolute inset-0 size-full object-cover object-top" />}
-          {moment.embed === undefined && (
+          <PreviewImage key={moment.imageUrl} src={moment.imageUrl} alt={`Saved capture of ${momentLabel(moment)}`} />
+          {moment.embed === undefined && moment.imageUrl !== undefined && (
             <p className="absolute inset-x-3 bottom-3 rounded-xl bg-cloud/90 px-3 py-2 text-sm text-ink shadow-sm backdrop-blur">
               This site can't be shown inside Ambar. Open the original to visit it.
             </p>
@@ -179,15 +267,23 @@ function SavedMedia({ moment }: { moment: Moment }) {
         </>
       );
     case "photo":
-      return <img src={moment.mediaUrl} alt={momentLabel(moment)} className="absolute inset-0 size-full object-contain" />;
+      return <PreviewImage key={moment.mediaUrl} src={moment.mediaUrl} alt={momentLabel(moment)} />;
     case "clip":
-      return (
-        // oxlint-disable-next-line jsx-a11y/media-has-caption -- the user's own clip; no captions exist for it.
-        <video src={moment.mediaUrl} poster={moment.posterUrl} controls playsInline muted className="absolute inset-0 size-full object-contain" aria-label={momentLabel(moment)} />
-      );
+      return <SavedClip moment={moment} />;
     case "file":
-      return <img src={moment.previewUrl} alt={`First page of ${moment.name}`} className="absolute inset-0 m-auto max-h-[92%] max-w-[92%] object-contain shadow-[0_8px_24px_rgb(20_20_20/0.15)]" />;
+      return <PreviewImage key={moment.previewUrl} src={moment.previewUrl} alt={`First page of ${moment.name}`} />;
   }
+}
+
+function SavedClip({ moment }: { moment: Extract<Moment, { kind: "clip" }> }) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed || moment.mediaUrl === "") {
+    return <PreviewImage src={moment.posterUrl} alt={momentLabel(moment)} />;
+  }
+
+  // oxlint-disable-next-line jsx-a11y/media-has-caption -- the user's own clip; no captions exist for it.
+  return <video src={moment.mediaUrl} poster={moment.posterUrl} onError={() => setFailed(true)} controls playsInline muted className="absolute inset-0 size-full object-contain" aria-label={momentLabel(moment)} />;
 }
 
 /** The live page, sandboxed: scripts and forms work inside it, but it can't navigate Ambar itself. */
@@ -213,7 +309,7 @@ function LivePage({ moment }: { moment: LinkMoment }) {
   return (
     <>
       {/* The capture stays underneath until the page has painted, then the page fades in over it. */}
-      {moment.imageUrl !== undefined && <img src={moment.imageUrl} alt="" className="absolute inset-0 size-full object-cover object-top" />}
+      {moment.imageUrl !== undefined && <img src={moment.imageUrl} alt="" className="absolute inset-0 size-full object-contain" />}
       <iframe
         title={`${momentLabel(moment)}, live`}
         src={embed.url}
@@ -223,36 +319,80 @@ function LivePage({ moment }: { moment: LinkMoment }) {
         onLoad={() => setLoaded(true)}
         className={cn("absolute inset-0 size-full border-0 bg-cloud transition-opacity duration-300 motion-reduce:transition-none", loaded ? "opacity-100" : "opacity-0")}
       />
-      <p aria-live="polite" className={cn("absolute inset-x-3 bottom-3 rounded-xl bg-cloud/90 px-3 py-2 text-sm text-ink shadow-sm backdrop-blur", loaded && !slow && "sr-only")}>
+      <p aria-live="polite" className={cn("absolute inset-x-3 bottom-3 rounded-xl bg-cloud/90 px-3 py-2 text-sm text-ink shadow-sm backdrop-blur", loaded && "sr-only")}>
         {loaded ? "Page loaded." : slow ? "Taking longer than usual. You can open the original instead." : "Loading the page…"}
       </p>
     </>
   );
 }
 
-/** Below the frame: the title, the page's name, its address (in sky-deep) and when it was kept. */
-function Details({ moment }: { moment: Moment }) {
+/** A contained preview is followed by its title, direct actions and the original's details. */
+function Details({ moment, onTrash }: { moment: Moment; onTrash: () => void }) {
   const actions = useMomentActions(moment);
-  const kept = new Date(moment.createdAt).toLocaleString("en-US", { dateStyle: "long", timeStyle: "short" });
   const source = sourceOf(moment);
+  const [editing, setEditing] = useState(false);
+  const edit = useRef<HTMLButtonElement>(null);
+  const canvasLabel = moment.onCanvas ? "Remove from Canvas" : "Add to Canvas";
 
   function open(event: MouseEvent<HTMLAnchorElement>) {
-    // Through the platform's "open", so desktop and mobile can use their own browser handoff.
     event.preventDefault();
     actions.open();
   }
 
   return (
-    <section aria-label="Details" className="flex shrink-0 flex-col gap-1 px-1">
-      <h2 className="text-2xl leading-tight tracking-tight text-balance">{momentLabel(moment)}</h2>
-      {source !== undefined && <p className="text-sm text-muted-foreground">{source}</p>}
-      {moment.kind === "link" && (
-        <a href={moment.url} onClick={open} target="_blank" rel="noreferrer" className="w-fit max-w-full truncate text-sm text-sky-deep underline-offset-4 hover:underline">
-          {moment.url}
-        </a>
-      )}
-      {moment.kind === "file" && <p className="truncate text-sm">{moment.name}</p>}
-      <p className="text-sm text-muted-foreground">{kept}</p>
+    <section aria-label="Details" className="flex min-w-0 flex-col gap-5 px-1">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <h2 title={momentLabel(moment)} className="line-clamp-2 text-2xl leading-tight tracking-tight wrap-anywhere">{momentLabel(moment)}</h2>
+          {source !== undefined && <p className="mt-1 truncate text-sm text-muted-foreground">{source}</p>}
+        </div>
+        <div role="group" aria-label="Moment actions" className="flex shrink-0 items-center gap-2">
+          <Button ref={edit} tone="cloud" size="icon-sm" aria-label="Edit title" title="Edit title" onClick={() => setEditing(true)}>
+            <PencilSimpleIcon weight="bold" aria-hidden />
+          </Button>
+          <Button tone={moment.onCanvas ? "leaf" : "cloud"} size="icon-sm" aria-label={canvasLabel} title={canvasLabel} aria-pressed={moment.onCanvas === true} onClick={actions.canvas}>
+            <FrameCornersIcon weight="bold" aria-hidden />
+          </Button>
+          <Button tone="danger" size="icon-sm" aria-label="Move to Trash" title="Move to Trash" onClick={() => {
+            onTrash();
+            actions.trash();
+          }}>
+            <TrashIcon weight="bold" aria-hidden />
+          </Button>
+        </div>
+      </div>
+      <div className="flex flex-col gap-3 border-t pt-5">
+        <h3 className="font-sans text-sm font-semibold">More details:</h3>
+        <dl className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-5 gap-y-2 text-sm">
+          <dt className="text-muted-foreground">{moment.kind === "link" ? "URL" : "Original"}</dt>
+          <dd className="min-w-0 text-right">
+            {moment.kind === "link" ? (
+              <a href={moment.url} onClick={open} target="_blank" rel="noreferrer" title={moment.url} className="inline-block max-w-full truncate rounded-sm text-sky-deep underline-offset-4 outline-hidden hover:underline focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring">
+                {hostOf(moment.url)}
+              </a>
+            ) : (
+              <Button tone="cloud" size="sm" onClick={actions.open}>
+                Open original
+                <ArrowSquareOutIcon weight="bold" aria-hidden />
+              </Button>
+            )}
+          </dd>
+          <dt className="text-muted-foreground">Saved</dt>
+          <dd className="text-right tabular-nums"><time dateTime={moment.createdAt}>{savedDate(moment.createdAt)}</time></dd>
+        </dl>
+        {moment.kind !== "link" && (
+          <div role="group" aria-label="Original actions" className="flex flex-wrap items-center gap-2 pt-2">
+            <CopyButton label="Copy" onCopy={() => actions.copy({ notifySuccess: false })} />
+            {actions.download !== undefined && (
+              <Button tone="cloud" size="sm" onClick={actions.download}>
+                <DownloadSimpleIcon weight="bold" aria-hidden />
+                Download
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+      <EditMomentDialog moment={moment} open={editing} onOpenChange={setEditing} returnFocus={edit} />
     </section>
   );
 }

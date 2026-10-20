@@ -12,8 +12,18 @@ export type AskResult = {
   reason: string;
 };
 
-/** Something to keep: a file (photo, clip, PDF) or a link. */
-export type KeepInput<TFile extends MomentFile = MomentFile> = { file: TFile } | { url: string };
+/** What the person adds while keeping. All optional: paste and drop keep without any of it. */
+export type KeepDetails = {
+  /** Their own words for it, kept with the topics Ambar finds (searchable, suggest collections). */
+  tags?: string[];
+  collectionIds?: string[];
+  note?: string;
+  /** Prototype: where it should be available (`Device.id`). Not synced yet. */
+  deviceIds?: string[];
+};
+
+/** Something to keep: a file (photo, clip, PDF) or a link, with optional details. */
+export type KeepInput<TFile extends MomentFile = MomentFile> = ({ file: TFile } | { url: string }) & KeepDetails;
 
 export type Kept = {
   moment: Moment;
@@ -311,4 +321,79 @@ export function groupByTime(moments: Moment[], now: Date = new Date()): TimeGrou
   }
 
   return [...groups].map(([label, items]) => ({ label, moments: items }));
+}
+
+// ---------------------------------------------------------------------------------------------------
+// Tags: what to offer while keeping. Words from the link or the file name first, then the topics the
+// person uses most. Lowercase, never one already chosen.
+
+const TAG_NOISE = new Set(["www", "com", "net", "org", "io", "app", "page", "html", "index", "http", "https", "img", "image", "file", "copy", "final"]);
+
+/** Up to `limit` tags to suggest for what is being kept (a URL or a file name). */
+export function suggestTags(source: string, moments: Moment[], chosen: string[] = [], limit = 5): string[] {
+  const taken = new Set(chosen.map((tag) => tag.toLowerCase()));
+
+  const fromSource = source
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/\.[a-z0-9]{2,4}$/, "")
+    .split(/[^a-z0-9]+/)
+    .filter((word) => word.length > 2 && !/^\d+$/.test(word) && !TAG_NOISE.has(word) && !STOPWORDS.has(word));
+
+  const counts = new Map<string, number>();
+
+  for (const moment of moments) {
+    for (const topic of moment.topics) {
+      counts.set(topic.toLowerCase(), (counts.get(topic.toLowerCase()) ?? 0) + 1);
+    }
+  }
+
+  const frequent = [...counts].toSorted((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([topic]) => topic);
+  const suggestions: string[] = [];
+
+  for (const tag of [...fromSource, ...frequent]) {
+    if (suggestions.length === limit) {
+      break;
+    }
+
+    if (!taken.has(tag) && !suggestions.includes(tag)) {
+      suggestions.push(tag);
+    }
+  }
+
+  return suggestions;
+}
+
+/** Tags as the person typed them, cleaned: trimmed, lowercase, no "#", no repeats or empties. */
+export function normalizeTags(tags: string[]): string[] {
+  const clean = new Set<string>();
+
+  for (const tag of tags) {
+    const word = tag.trim().replace(/^#+/, "").toLowerCase();
+
+    if (word !== "") {
+      clean.add(word);
+    }
+  }
+
+  return [...clean];
+}
+
+/** A kind to show, or every moment. */
+export type KindFilter = MomentKind | "all";
+
+/** How many moments of each kind there are (0 for kinds not kept yet). */
+export function countByKind(moments: Moment[]): Record<MomentKind, number> {
+  const counts: Record<MomentKind, number> = { photo: 0, clip: 0, link: 0, file: 0 };
+
+  for (const moment of moments) {
+    counts[moment.kind] += 1;
+  }
+
+  return counts;
+}
+
+/** The moments of one kind, in their original order; "all" returns them untouched. */
+export function filterByKind(moments: Moment[], kind: KindFilter): Moment[] {
+  return kind === "all" ? moments : moments.filter((moment) => moment.kind === kind);
 }

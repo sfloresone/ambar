@@ -18,13 +18,18 @@ type SegmentedControlProps = {
   /** Accessible name of the group. */
   label: string;
   defaultValue?: string;
+  /** Controlled choice, for a parent that can move it (e.g. back to "all"). */
+  value?: string;
   onValueChange?: (value: string) => void;
   /** Options shown as icons instead of text, by value. */
   icons?: Record<string, SegmentIcon>;
+  /** Visible content per value (text with a count, an icon); its text is the accessible name. */
+  labels?: Record<string, ReactNode>;
 };
 
-export function SegmentedControl({ options, label, defaultValue, onValueChange, icons }: SegmentedControlProps) {
-  const [value, setValue] = useState(defaultValue ?? options[0] ?? "");
+export function SegmentedControl({ options, label, defaultValue, value: controlled, onValueChange, icons, labels }: SegmentedControlProps) {
+  const [own, setValue] = useState(defaultValue ?? options[0] ?? "");
+  const value = controlled ?? own;
 
   function change(next: string[]) {
     // Single choice that can never be empty: ignore attempts to unpress the active segment.
@@ -57,14 +62,14 @@ export function SegmentedControl({ options, label, defaultValue, onValueChange, 
             title={icon?.label}
             className={cn(
               "h-8 cursor-pointer rounded-lg text-muted-foreground outline-hidden select-none",
-              icon === undefined ? "px-3.5" : "grid w-9 place-items-center [&_svg]:size-4",
+              icon === undefined ? "inline-flex items-center gap-1.5 px-3.5 [&_svg]:size-4" : "grid w-9 place-items-center [&_svg]:size-4",
               "transition-[color,background-color,box-shadow] duration-300 ease-settle motion-reduce:transition-none",
               "hover:text-foreground focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-1 focus-visible:outline-ring",
               "data-pressed:bg-cloud data-pressed:text-ink",
               SELECTED_RAISED,
             )}
           >
-            {icon === undefined ? option : icon.icon}
+            {icon === undefined ? (labels?.[option] ?? option) : icon.icon}
           </Toggle>
         );
       })}

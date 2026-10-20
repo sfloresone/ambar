@@ -247,3 +247,13 @@
     @apply font-heading font-bold;
   }
 }
+
+/* Items moved by moveInPlace (lib/view-transition.ts) glide to their new place; the rest of the page never cross-fades. */
+::view-transition-group(*.moment) {
+  animation-duration: 300ms;
+  animation-timing-function: var(--ease-out-soft);
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}

@@ -6,6 +6,8 @@ export * from "./auth-return.ts";
 
 export * from "./collection.ts";
 
+export * from "./devices.ts";
+
 export * from "./library.ts";
 
 export * from "./moment.ts";

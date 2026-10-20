@@ -2,6 +2,7 @@
 // focus return, collision-aware positioning, portal). Surface matches the header pill: cloud glass,
 // hairline, short shadow. Build menus from these, never from scratch.
 import { Menu } from "@base-ui/react/menu";
+import { CheckIcon } from "@phosphor-icons/react";
 import type { ComponentProps, ReactNode, RefObject } from "react";
 
 import { cn } from "../lib/utils.ts";
@@ -49,6 +50,20 @@ const ITEM =
 
 export function MenuItem({ className, ...props }: ComponentProps<typeof Menu.Item>) {
   return <Menu.Item className={cn(ITEM, className)} {...props} />;
+}
+
+/** A toggle in a menu (stays open on click); the leaf check shows when it's on. */
+export function MenuCheckboxItem({ className, children, ...props }: ComponentProps<typeof Menu.CheckboxItem>) {
+  return (
+    <Menu.CheckboxItem className={cn(ITEM, "data-disabled:opacity-55", className)} {...props}>
+      <span className="grid size-4 shrink-0 place-items-center">
+        <Menu.CheckboxItemIndicator>
+          <CheckIcon weight="bold" aria-hidden className="text-leaf" />
+        </Menu.CheckboxItemIndicator>
+      </span>
+      {children}
+    </Menu.CheckboxItem>
+  );
 }
 
 export function MenuLinkItem({ className, ...props }: ComponentProps<typeof Menu.LinkItem>) {
