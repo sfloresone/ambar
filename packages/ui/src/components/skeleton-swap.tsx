@@ -20,6 +20,17 @@ export function useSkeletonSwap(ready: boolean, { delay = 120, minVisible = 380 
   // When the skeleton appeared, and whether its minimum time has passed.
   const [shownAt, setShownAt] = useState<number | null>(null);
   const [held, setHeld] = useState(false);
+  const [wasReady, setWasReady] = useState(ready);
+
+  // A new load starts from idle, so it gets its own delay instead of reusing the last skeleton.
+  if (ready !== wasReady) {
+    setWasReady(ready);
+
+    if (!ready) {
+      setShownAt(null);
+      setHeld(false);
+    }
+  }
 
   useEffect(() => {
     if (ready) {
@@ -66,8 +77,8 @@ export function SkeletonSwap({ ready, label, skeleton, className, children, ...t
 
   return (
     <div data-slot="skeleton-swap" aria-busy={phase !== "content" || undefined} className={cn("grid", className)}>
-      {phase === "skeleton" && (
-        <div aria-hidden className="col-start-1 row-start-1">
+      {phase !== "content" && (
+        <div aria-hidden className={cn("col-start-1 row-start-1", phase === "idle" && "invisible")}>
           {skeleton}
         </div>
       )}
