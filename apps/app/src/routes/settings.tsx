@@ -5,7 +5,7 @@ import { useToast } from "@ambar/ui/components/toaster";
 import { createClients } from "@ambar/ui/lib/clients";
 import { SignInMethods } from "@ambar/ui/screens/settings/sign-in-methods";
 import { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 
 import { apiUrl } from "../api-url.ts";
 import { useAppSession } from "../session.ts";
@@ -39,19 +39,9 @@ export function SettingsRoute() {
     setParams(params, { replace: true });
   }, [params, setParams, toast]);
 
-  if (session === undefined) {
+  // AppLayout renders routes only for a signed-in visitor (or /login).
+  if (!session) {
     return null;
-  }
-
-  if (session === null) {
-    return (
-      <section className="m-auto flex flex-col items-center gap-3 text-center">
-        <h1 className="text-2xl tracking-tight">Sign in to see your settings</h1>
-        <Link to="/login" className="text-sm text-link underline-offset-4 hover:underline">
-          Sign in
-        </Link>
-      </section>
-    );
   }
 
   return (
