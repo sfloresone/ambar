@@ -6,11 +6,8 @@
 package mail
 
 import (
-	"bytes"
 	"context"
 	"errors"
-	"fmt"
-	"html/template"
 	"log/slog"
 	"net/http"
 	"time"
@@ -45,7 +42,7 @@ func NewResend(apiKey, from string) *Resend {
 // SendSignIn sends the code and the link. key (the challenge id) is the idempotency key: however many
 // times the request is retried, Resend delivers it once.
 func (r *Resend) SendSignIn(ctx context.Context, to, code, link, key string) error {
-	html, err := signInHTML(code, link)
+	html, text, err := renderSignIn(code, link)
 	if err != nil {
 		return err
 	}
@@ -59,8 +56,8 @@ func (r *Resend) SendSignIn(ctx context.Context, to, code, link, key string) err
 	sent, err := r.client.Emails.SendWithOptions(ctx, &resend.SendEmailRequest{
 		From:    r.from,
 		To:      []string{to},
-		Subject: fmt.Sprintf("Your Ambar code: %s", code),
-		Text:    signInText(code, link),
+		Subject: "Your Ambar sign-in code",
+		Text:    text,
 		Html:    html,
 		Tags:    []resend.Tag{{Name: "category", Value: "sign_in"}},
 		// Keeps Gmail from threading every sign-in email into one conversation.
@@ -99,35 +96,4 @@ func (Console) SendSignIn(ctx context.Context, to, code, link, _ string) error {
 	slog.InfoContext(ctx, "dev mail: sign-in", "to", to, "code", code, "link", link)
 
 	return nil
-}
-
-func signInText(code, link string) string {
-	return fmt.Sprintf(`Your Ambar code is %s
-
-Or open this link to sign in:
-%s
-
-It works once and expires in 10 minutes. If you didn't ask for it, you can ignore this email.
-`, code, link)
-}
-
-var signInTemplate = template.Must(template.New("sign-in").Parse(`<!doctype html>
-<html lang="en">
-<body style="margin:0;padding:32px 16px;background:#ffffff;color:#141414;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
-  <div style="max-width:420px;margin:0 auto">
-    <p style="font-size:16px;margin:0 0 16px">Your Ambar code is</p>
-    <p style="font-size:32px;font-weight:700;letter-spacing:6px;margin:0 0 24px">{{.Code}}</p>
-    <p style="margin:0 0 24px"><a href="{{.Link}}" style="display:inline-block;background:#141414;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:12px;font-weight:600">Sign in to Ambar</a></p>
-    <p style="font-size:13px;color:#6b6b6b;margin:0">It works once and expires in 10 minutes. If you didn't ask for it, you can ignore this email.</p>
-  </div>
-</body>
-</html>`))
-
-func signInHTML(code, link string) (string, error) {
-	var b bytes.Buffer
-	if err := signInTemplate.Execute(&b, struct{ Code, Link string }{code, link}); err != nil {
-		return "", err
-	}
-
-	return b.String(), nil
 }

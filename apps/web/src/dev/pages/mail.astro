@@ -1,0 +1,50 @@
+---
+import { readFile } from "node:fs/promises";
+import DevLayout from "../components/dev-layout.astro";
+import Specimen from "../components/specimen.astro";
+
+const templateDirectory = new URL("../../../../../apps/api/mail/templates/", import.meta.url);
+
+const sample = {
+  Code: "123456",
+  Link: "https://app.example/login?verify=sample-token",
+};
+
+const [htmlTemplate, textTemplate] = await Promise.all([
+  readFile(new URL("sign-in.html", templateDirectory), "utf8"),
+  readFile(new URL("sign-in.txt", templateDirectory), "utf8"),
+]);
+
+const renderSample = (template: string) =>
+  template.replaceAll("{{.Code}}", sample.Code).replaceAll("{{.Link}}", sample.Link);
+
+const renderedHTML = renderSample(htmlTemplate);
+
+const renderedText = renderSample(textTemplate);
+---
+
+<DevLayout title="Email template">
+  <p slot="lead" class="max-w-2xl text-muted-foreground">
+    A preview of the sign-in email sent by the API. The HTML and plain-text panels read directly from
+    <code>apps/api/mail/templates</code> and use sample values.
+  </p>
+
+  <Specimen
+    title="Rendered HTML"
+    description="Rendered in an isolated frame at a readable email width. The link uses a fake sample token."
+  >
+    <div class="overflow-hidden rounded-xl border bg-muted p-4 sm:p-6">
+      <iframe
+        title="Rendered Ambar sign-in email"
+        srcdoc={renderedHTML}
+        sandbox=""
+        referrerpolicy="no-referrer"
+        class="mx-auto block h-[600px] w-full max-w-[520px] border-0 bg-white"
+      ></iframe>
+    </div>
+    <div class="min-w-0 overflow-hidden rounded-xl border bg-background p-5">
+      <h3 class="mb-4 text-sm font-medium">Plain-text version</h3>
+      <pre class="overflow-x-auto whitespace-pre-wrap break-words font-sans text-sm leading-6 text-foreground">{renderedText}</pre>
+    </div>
+  </Specimen>
+</DevLayout>

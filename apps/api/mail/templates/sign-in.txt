@@ -1,0 +1,8 @@
+Use this one-time code to sign in to Ambar.
+
+Sign in to Ambar:
+{{.Link}}
+
+Your one-time code is {{.Code}}
+
+This code works once and expires in 10 minutes. If you didn't ask for it, you can ignore this email.
