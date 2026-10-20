@@ -11,15 +11,17 @@ type TimelineProps = {
   onOpen: (moment: Moment) => void;
   /** Most columns to use (2×2, 3×3, 4×4). */
   columns?: keyof typeof MOMENT_COLUMNS;
+  /** Moments to show; the rest stay mounted but hidden, so showing them again needs no reload or re-measure. */
+  shownIds?: ReadonlySet<string>;
 };
 
-export function Timeline({ moments, onOpen, columns = 4 }: TimelineProps) {
+export function Timeline({ moments, onOpen, columns = 4, shownIds }: TimelineProps) {
   const newestFirst = moments.toSorted((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 
   return (
     <MomentGrid columns={columns} label="Moments, newest first">
       {newestFirst.map((moment) => (
-        <li key={moment.id} data-moment-id={moment.id} className="min-w-0 pb-5 @4xl:pb-6">
+        <li key={moment.id} data-moment-id={moment.id} hidden={shownIds !== undefined && !shownIds.has(moment.id)} className="min-w-0 pb-5 @4xl:pb-6">
           <MomentCard moment={moment} onOpen={onOpen} />
         </li>
       ))}

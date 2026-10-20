@@ -184,7 +184,8 @@ export function KeepComposer() {
   const filled: Record<Extra, boolean> = { tags: tags.length > 0, collection: chosenCollections.length > 0, note: note.trim() !== "" };
 
   return (
-    <section aria-label="Keep a moment" className="fixed right-gutter bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 flex flex-col items-end gap-2">
+    // Its own view-transition name keeps it above the library while the moments move (lib/view-transition).
+    <section aria-label="Keep a moment" className="fixed right-gutter bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 flex flex-col items-end gap-2 [view-transition-name:keep-composer]">
       {open && extras.length > 0 && (
         <div className={cn(GLASS, WIDTH.open, "flex max-h-[50dvh] animate-in flex-col gap-4 overflow-y-auto rounded-3xl p-3 duration-200 ease-out-soft fade-in slide-in-from-bottom-1 motion-reduce:animate-none")}>
           {extras.map((extra) => (

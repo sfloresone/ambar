@@ -15,7 +15,7 @@ import { LoadingMomentList, MomentList } from "./moment-list.tsx";
 import { MOMENTS_VIEWS, useMomentsSplit, useMomentsView, type MomentsView } from "./moments-view.ts";
 import { Timeline } from "./timeline.tsx";
 import { cn } from "../../lib/utils.ts";
-import { moveInPlace } from "../../lib/view-transition.ts";
+import { moveInPlace, swapInPlace } from "../../lib/view-transition.ts";
 
 /** n×n squares: the density icon for a grid view. */
 function GridIcon({ n }: { n: number }) {
@@ -71,6 +71,15 @@ export function LibraryScreen({ onOpenMoment }: LibraryScreenProps) {
   // Back to all once the chosen kind has nothing left (its last moment trashed).
   const kind = chosen !== "all" && counts[chosen] > 0 ? chosen : "all";
   const shown = moments === null ? null : filterByKind(moments, kind);
+  const shownIds = new Set(shown?.map((moment) => moment.id));
+
+  // Between grid densities the same cards resize and reflow, so they glide; to or from the list there is no
+  // card to follow, so the whole area cross-fades.
+  function changeView(next: string) {
+    const grids = view !== "list" && next !== "list";
+
+    void (grids ? moveInPlace : swapInPlace)(results.current, () => setView(next));
+  }
 
   function choose(next: string) {
     if (!isKindFilter(next)) return;
@@ -87,44 +96,38 @@ export function LibraryScreen({ onOpenMoment }: LibraryScreenProps) {
   }
 
   return (
-    // pb-24: the last row stays clear of the Keep pill in the corner.
-    <div ref={screen} data-moments-split={split || undefined} className={cn("@container flex flex-col gap-8 pb-24", split && "min-h-0 flex-1 gap-5 pb-20")}>
+    // pb-24: the last row stays clear of the Keep pill in the corner. The split list only adds a fixed height
+    // (its columns scroll inside); spacing never changes between views, so switching never moves the header.
+    <div ref={screen} data-moments-split={split || undefined} className={cn("@container flex flex-col gap-8 pb-24", split && "min-h-0 flex-1")}>
       <KeepZone />
       <KeepComposer />
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-4">
-        {/* Also where focus lands after the iris opens. */}
-        <div className="flex items-center gap-3">
-          <h1 tabIndex={-1} className="text-3xl tracking-tight">Moments</h1>
-          {moments !== null && shown !== null && (
-            <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground tabular-nums" aria-label={kind === "all" ? `${moments.length} kept moments` : `${shown.length} of ${moments.length} kept moments shown`}>
-              {kind === "all" ? moments.length : `${shown.length} of ${moments.length}`}
-            </span>
-          )}
+        {/* The header pill already names the section; the heading stays for assistive tech and is where focus lands after the iris opens. */}
+        <h1 tabIndex={-1} className="sr-only">Moments</h1>
+        {/* Only kinds that exist; one kind alone needs no filter, just the count. */}
+        {present.length > 1 ? (
+          <div ref={chips} className="max-w-full min-w-0 overflow-x-auto">
+            <SegmentedControl
+              options={["all", ...present]}
+              label="Kind"
+              value={kind}
+              onValueChange={choose}
+              labels={Object.fromEntries(
+                (["all", ...present] as const).map((option) => [
+                  option,
+                  <>
+                    <span className="contents @max-3xl:hidden">{KINDS[option].icon}</span>
+                    {KINDS[option].label}{" "}
+                    <span className="text-xs text-muted-foreground tabular-nums">{option === "all" ? moments?.length : counts[option]}</span>
+                  </>,
+                ]),
+              )}
+            />
         </div>
-        <div className="flex max-w-full min-w-0 flex-wrap items-center gap-3">
-          {/* Only kinds that exist; one kind alone needs no filter. */}
-          {present.length > 1 && (
-            <div ref={chips} className="max-w-full min-w-0 overflow-x-auto">
-              <SegmentedControl
-                options={["all", ...present]}
-                label="Kind"
-                value={kind}
-                onValueChange={choose}
-                labels={Object.fromEntries(
-                  (["all", ...present] as const).map((option) => [
-                    option,
-                    <>
-                      <span className="contents @max-3xl:hidden">{KINDS[option].icon}</span>
-                      {KINDS[option].label}{" "}
-                      <span className="text-xs text-muted-foreground tabular-nums">{option === "all" ? moments?.length : counts[option]}</span>
-                    </>,
-                  ]),
-                )}
-              />
-            </div>
-          )}
-          <SegmentedControl options={[...MOMENTS_VIEWS]} icons={VIEW_ICONS} label="Layout" defaultValue={view} onValueChange={setView} />
-        </div>
+        ) : (
+          moments !== null && moments.length > 0 && <p className="text-sm text-muted-foreground tabular-nums">{moments.length} {moments.length === 1 ? "moment" : "moments"}</p>
+        )}
+        <SegmentedControl options={[...MOMENTS_VIEWS]} icons={VIEW_ICONS} label="Layout" defaultValue={view} onValueChange={changeView} />
       </header>
 
       {/* Loading holds the geometry of the chosen view. */}
@@ -140,8 +143,8 @@ export function LibraryScreen({ onOpenMoment }: LibraryScreenProps) {
       >
         {moments?.length === 0 && <EmptyLibrary />}
         {shown !== null && shown.length > 0 && (
-          <div ref={results} className={cn(split && "contents")}>
-            {view === "list" ? <MomentList moments={shown} split={split} onOpen={onOpenMoment} /> : <Timeline moments={shown} onOpen={onOpenMoment} columns={GRID_COLUMNS[view]} />}
+          <div ref={results} className={cn(split && "h-full min-h-0")}>
+            {view === "list" ? <MomentList moments={shown} split={split} onOpen={onOpenMoment} /> : <Timeline moments={moments ?? []} shownIds={shownIds} onOpen={onOpenMoment} columns={GRID_COLUMNS[view]} />}
           </div>
         )}
       </SkeletonSwap>

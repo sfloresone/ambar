@@ -120,7 +120,7 @@ export function AppLayout() {
               {session && <GetAmbarMenu container={header} />}
             </div>
           </header>
-          <main className={cn(!fullBleed && APP_FRAME, "flex flex-1 flex-col [&_h1:focus]:outline-hidden", !fullBleed && "py-10 sm:py-14", "has-[[data-moments-split]]:min-h-0 has-[[data-moments-split]]:py-6")}>
+          <main className={cn(!fullBleed && APP_FRAME, "flex flex-1 flex-col [&_h1:focus]:outline-hidden", !fullBleed && "py-10 sm:py-14", "has-[[data-moments-split]]:min-h-0")}>
             <Outlet context={{ session, failed, refresh, signOut: signOutAndLeave } satisfies AppContext} />
           </main>
         </div>

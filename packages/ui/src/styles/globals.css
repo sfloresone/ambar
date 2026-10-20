@@ -248,10 +248,66 @@
   }
 }
 
-/* Items moved by moveInPlace (lib/view-transition.ts) glide to their new place; the rest of the page never cross-fades. */
+/* Items moved by moveInPlace (lib/view-transition.ts) glide to their new place, entering ones settle in
+   and leaving ones step out quickly; the rest of the page never cross-fades. */
 ::view-transition-group(*.moment) {
-  animation-duration: 300ms;
+  animation-duration: 380ms;
   animation-timing-function: var(--ease-out-soft);
+}
+/* A card that changes size (grid density) scales as one picture instead of cross-fading two, so text never doubles. */
+::view-transition-old(*.moment):not(:only-child) {
+  animation: none;
+  opacity: 0;
+}
+::view-transition-new(*.moment):not(:only-child) {
+  animation: none;
+}
+::view-transition-new(*.moment):only-child {
+  animation: moment-enter 380ms var(--ease-out-soft) both;
+}
+::view-transition-old(*.moment):only-child {
+  animation: moment-leave 160ms ease-out both;
+}
+@keyframes moment-enter {
+  from {
+    opacity: 0;
+    scale: 0.97;
+  }
+}
+@keyframes moment-leave {
+  to {
+    opacity: 0;
+    scale: 0.97;
+  }
+}
+/* Grid ↔ list (swapInPlace): the old view steps out quickly, the new one settles in from slightly below. */
+::view-transition-group(moments-view) {
+  animation-duration: 320ms;
+  animation-timing-function: var(--ease-out-soft);
+}
+/* Both views at their real size, pinned to the top: a tall grid is clipped as the area changes height, never rescaled. */
+::view-transition-old(moments-view),
+::view-transition-new(moments-view) {
+  height: 100%;
+  object-fit: none;
+  object-position: top;
+}
+::view-transition-old(moments-view) {
+  animation: view-leave 140ms ease-out both;
+}
+::view-transition-new(moments-view) {
+  animation: view-enter 320ms var(--ease-out-soft) both;
+}
+@keyframes view-leave {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes view-enter {
+  from {
+    opacity: 0;
+    translate: 0 0.5rem;
+  }
 }
 ::view-transition-old(root),
 ::view-transition-new(root) {
