@@ -1,6 +1,5 @@
 import { plans } from "@ambar/core";
 import { Button } from "@ambar/ui/components/button";
-import { Link } from "react-router";
 
 import { useAppSession } from "../session.ts";
 
@@ -9,19 +8,9 @@ export function SettingsRoute() {
   const { session, signOut } = useAppSession();
   const free = plans.find((plan) => plan.monthly === 0);
 
-  if (session === undefined) {
+  // AppLayout renders routes only for a signed-in visitor (or /login).
+  if (!session) {
     return null;
-  }
-
-  if (session === null) {
-    return (
-      <section className="m-auto flex flex-col items-center gap-3 text-center">
-        <h1 className="text-2xl tracking-tight">Sign in to see your settings</h1>
-        <Link to="/login" className="text-sm text-link underline-offset-4 hover:underline">
-          Sign in
-        </Link>
-      </section>
-    );
   }
 
   return (
