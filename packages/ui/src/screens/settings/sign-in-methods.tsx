@@ -8,6 +8,7 @@ import { CheckCircleIcon, EnvelopeSimpleIcon } from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { Button } from "../../components/button.tsx";
+import { SkeletonBlock, useSkeletonSwap, type SwapPhase } from "../../components/skeleton-swap.tsx";
 import { useProviderHandoff } from "../../components/provider-handoff.tsx";
 import { PROVIDER_NAME, ProviderLogo } from "../../components/provider-logo.tsx";
 import { useToast } from "../../components/toaster.tsx";
@@ -30,6 +31,8 @@ export function SignInMethods({ auth, returnTo }: SignInMethodsProps) {
   const [busy, setBusy] = useState<Provider | null>(null);
   const logos = useRef(new Map<Provider, HTMLSpanElement>());
   const { start, leaving, overlay } = useProviderHandoff();
+  // Each row's status and button wait for both answers; the rows themselves are there from the start.
+  const phase = useSkeletonSwap(loaded !== null);
 
   const load = useCallback(() => {
     let active = true;
@@ -68,7 +71,7 @@ export function SignInMethods({ auth, returnTo }: SignInMethodsProps) {
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border bg-card p-6">
+    <div aria-busy={phase !== "content" || undefined} className="flex flex-col gap-3 rounded-2xl border bg-card p-6">
       <div className="flex flex-col gap-1">
         <h2 className="text-lg">Sign-in methods</h2>
         <p className="text-sm text-muted-foreground">Ways into your Ambar. A code to your email always works.</p>
@@ -105,7 +108,8 @@ export function SignInMethods({ auth, returnTo }: SignInMethodsProps) {
                 </span>
               }
               label={`Sign in with ${PROVIDER_NAME[provider]}`}
-              detail={identity?.email}
+              detail={phase === "content" ? identity?.email : undefined}
+              actions={phase}
             >
               {identity !== undefined && (
                 <span className="flex items-center gap-1.5 text-xs font-medium text-leaf">
@@ -145,7 +149,7 @@ export function SignInMethods({ auth, returnTo }: SignInMethodsProps) {
         </p>
       )}
       <p aria-live="polite" className="sr-only">
-        {leaving === null ? "" : `Connecting to ${PROVIDER_NAME[leaving]}`}
+        {leaving === null ? (phase === "content" ? "Sign-in methods loaded" : "") : `Connecting to ${PROVIDER_NAME[leaving]}`}
       </p>
       {overlay}
     </div>
@@ -157,10 +161,12 @@ type MethodRowProps = {
   label: string;
   /** The connected account, under the label. */
   detail?: string;
+  /** Loading: the actions' place is held (a skeleton after a moment), so nothing moves when they arrive. */
+  actions?: SwapPhase;
   children: ReactNode;
 };
 
-function MethodRow({ icon, label, detail, children }: MethodRowProps) {
+function MethodRow({ icon, label, detail, actions = "content", children }: MethodRowProps) {
   return (
     <li className="flex min-h-16 items-center gap-3 py-3">
       <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-full bg-muted text-foreground">
@@ -170,7 +176,13 @@ function MethodRow({ icon, label, detail, children }: MethodRowProps) {
         <span className="text-sm">{label}</span>
         {detail !== undefined && <span className="truncate text-xs text-muted-foreground">{detail}</span>}
       </span>
-      <span className="flex shrink-0 items-center gap-3">{children}</span>
+      {actions === "content" ? (
+        <span className="flex shrink-0 animate-in items-center gap-3 duration-300 ease-out-soft fade-in motion-reduce:animate-none">{children}</span>
+      ) : (
+        <span aria-hidden className="flex h-9 w-28 shrink-0 items-center justify-end">
+          {actions === "skeleton" && <SkeletonBlock className="h-9 w-24" />}
+        </span>
+      )}
     </li>
   );
 }

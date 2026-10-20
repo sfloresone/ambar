@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { cn } from "../lib/utils.ts";
 import { Button } from "./button.tsx";
+import { SkeletonBlock, SkeletonSwap } from "./skeleton-swap.tsx";
 import { useProviderHandoff } from "./provider-handoff.tsx";
 import { PROVIDER_NAME, ProviderLogo } from "./provider-logo.tsx";
 
@@ -18,7 +19,8 @@ type ProviderButtonsProps = {
 };
 
 export function ProviderButtons({ auth, returnTo, className }: ProviderButtonsProps) {
-  const [providers, setProviders] = useState<Provider[]>([]);
+  // null while asking the API which providers it has.
+  const [providers, setProviders] = useState<Provider[] | null>(null);
   const logos = useRef(new Map<Provider, HTMLSpanElement>());
   const { start, leaving, overlay } = useProviderHandoff();
   // With motion the iris covers the button as it leaves; without it, the key shows it is on its way.
@@ -38,7 +40,8 @@ export function ProviderButtons({ auth, returnTo, className }: ProviderButtonsPr
     };
   }, [auth]);
 
-  if (providers.length === 0) {
+  // None configured: nothing to offer, and nothing to reserve.
+  if (providers?.length === 0) {
     return null;
   }
 
@@ -47,31 +50,46 @@ export function ProviderButtons({ auth, returnTo, className }: ProviderButtonsPr
   }
 
   return (
-    <div className={cn("flex flex-col gap-4", className)}>
-      <p className="flex items-center gap-3 text-xs text-muted-foreground before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">or</p>
-      <div className="flex flex-col gap-3">
-        {providers.map((provider) => (
-          <Button key={provider} tone="cloud" size="lg" loading={reduceMotion && leaving === provider} disabled={leaving !== null && leaving !== provider} onClick={() => void choose(provider)}>
-            <span
-              ref={(element) => {
-                if (element === null) {
-                  logos.current.delete(provider);
-                } else {
-                  logos.current.set(provider, element);
-                }
-              }}
-              className="inline-flex"
-            >
-              <ProviderLogo provider={provider} />
-            </span>
-            Continue with {PROVIDER_NAME[provider]}
-          </Button>
-        ))}
+    // The divider and two keys' worth of space is held while loading, so the form never shifts.
+    <SkeletonSwap ready={providers !== null} label="Sign-in options" skeleton={<ProviderButtonsSkeleton />} className={cn(providers === null && "min-h-35", className)}>
+      <div className="flex flex-col gap-4">
+        <p className="flex items-center gap-3 text-xs text-muted-foreground before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">or</p>
+        <div className="flex flex-col gap-3">
+          {providers?.map((provider) => (
+            <Button key={provider} tone="cloud" size="lg" loading={reduceMotion && leaving === provider} disabled={leaving !== null && leaving !== provider} onClick={() => void choose(provider)}>
+              <span
+                ref={(element) => {
+                  if (element === null) {
+                    logos.current.delete(provider);
+                  } else {
+                    logos.current.set(provider, element);
+                  }
+                }}
+                className="inline-flex"
+              >
+                <ProviderLogo provider={provider} />
+              </span>
+              Continue with {PROVIDER_NAME[provider]}
+            </Button>
+          ))}
+        </div>
+        <p aria-live="polite" className="sr-only">
+          {leaving === null ? "" : `Connecting to ${PROVIDER_NAME[leaving]}`}
+        </p>
+        {overlay}
       </div>
-      <p aria-live="polite" className="sr-only">
-        {leaving === null ? "" : `Connecting to ${PROVIDER_NAME[leaving]}`}
-      </p>
-      {overlay}
+    </SkeletonSwap>
+  );
+}
+
+function ProviderButtonsSkeleton() {
+  return (
+    <div className="flex flex-col gap-4">
+      <SkeletonBlock className="mx-auto h-4 w-6" />
+      <div className="flex flex-col gap-3">
+        <SkeletonBlock className="h-12 rounded-xl" />
+        <SkeletonBlock className="h-12 rounded-xl" />
+      </div>
     </div>
   );
 }

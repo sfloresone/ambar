@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Button } from "../../components/button.tsx";
 import { ConfirmDialog } from "../../components/confirm-dialog.tsx";
 import { useLibrary } from "./library-context.tsx";
+import { SkeletonSwap } from "../../components/skeleton-swap.tsx";
 import { LoadingGrid } from "./loading-grid.tsx";
 
 export function TrashScreen() {
@@ -28,37 +29,38 @@ export function TrashScreen() {
         )}
       </header>
 
-      {trash === null && <LoadingGrid />}
-      {trash?.length === 0 && <p className="py-16 text-center text-muted-foreground">The Trash is empty.</p>}
+      <SkeletonSwap ready={trash !== null} label="Trash" skeleton={<LoadingGrid />} className={trash === null ? "min-h-[60svh]" : undefined}>
+        {trash?.length === 0 && <p className="py-16 text-center text-muted-foreground">The Trash is empty.</p>}
 
-      {trash !== null && trash.length > 0 && (
-        <ul className="grid grid-cols-1 gap-4 @md:grid-cols-2 @3xl:grid-cols-3">
-          {trash.map((moment) => {
-            const days = moment.deletedAt === undefined ? TRASH_DAYS : trashDaysLeft(moment.deletedAt);
-            const image = momentImage(moment);
+        {trash !== null && trash.length > 0 && (
+          <ul className="grid grid-cols-1 gap-4 @md:grid-cols-2 @3xl:grid-cols-3">
+            {trash.map((moment) => {
+              const days = moment.deletedAt === undefined ? TRASH_DAYS : trashDaysLeft(moment.deletedAt);
+              const image = momentImage(moment);
 
-            return (
-              <li key={moment.id} className="flex items-center gap-3 rounded-2xl border bg-card p-2.5">
-                <div className="size-16 shrink-0 overflow-hidden rounded-xl bg-muted">
-                  {image !== undefined && <img src={image} alt="" loading="lazy" decoding="async" className="size-full object-cover opacity-80 grayscale-[0.4]" />}
-                </div>
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <p className="truncate text-sm font-medium">{momentLabel(moment)}</p>
-                  <p className="text-xs text-muted-foreground">{days <= 1 ? "Erased tomorrow" : `${days} days left`}</p>
-                </div>
-                <div className="flex shrink-0 gap-1">
-                  <Button tone="cloud" size="icon-sm" aria-label={`Restore ${momentLabel(moment)}`} onClick={() => void restore(moment.id)}>
-                    <ArrowCounterClockwiseIcon weight="bold" />
-                  </Button>
-                  <Button tone="cloud" size="icon-sm" aria-label={`Delete ${momentLabel(moment)} forever`} onClick={() => void purge(moment.id)}>
-                    <TrashIcon weight="bold" />
-                  </Button>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+              return (
+                <li key={moment.id} className="flex items-center gap-3 rounded-2xl border bg-card p-2.5">
+                  <div className="size-16 shrink-0 overflow-hidden rounded-xl bg-muted">
+                    {image !== undefined && <img src={image} alt="" loading="lazy" decoding="async" className="size-full object-cover opacity-80 grayscale-[0.4]" />}
+                  </div>
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <p className="truncate text-sm font-medium">{momentLabel(moment)}</p>
+                    <p className="text-xs text-muted-foreground">{days <= 1 ? "Erased tomorrow" : `${days} days left`}</p>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <Button tone="cloud" size="icon-sm" aria-label={`Restore ${momentLabel(moment)}`} onClick={() => void restore(moment.id)}>
+                      <ArrowCounterClockwiseIcon weight="bold" />
+                    </Button>
+                    <Button tone="cloud" size="icon-sm" aria-label={`Delete ${momentLabel(moment)} forever`} onClick={() => void purge(moment.id)}>
+                      <TrashIcon weight="bold" />
+                    </Button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </SkeletonSwap>
 
       <ConfirmDialog
         open={confirming}

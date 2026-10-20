@@ -43,6 +43,17 @@
   --spacing-gutter: clamp(1rem, 0.25rem + 3vw, 3rem);
   /* The app's content width (the landing keeps its 64 rem frame). */
   --container-app: 100rem;
+  /* Indeterminate ProgressBar: a segment crawling the track. Tailwind has no such keyframe. */
+  --animate-crawl: crawl 1.25s ease-in-out infinite;
+
+  @keyframes crawl {
+    from {
+      translate: -100% 0;
+    }
+    to {
+      translate: 290% 0;
+    }
+  }
 }
 
 @theme inline {
