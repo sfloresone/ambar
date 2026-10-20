@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"net"
 	"net/http"
@@ -10,7 +11,36 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
+
+	"ambar/api/auth"
 )
+
+type sessionKey struct{}
+
+// authenticated is the gate for every private route (routes.go mounts them under it): without a live
+// session (cookie or Bearer) it answers 401 before any handler runs; with one, the handler reads it
+// with sessionFrom. Private by default: a route inside the group can't forget to check.
+func (a *api) authenticated(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token, _ := a.sessionToken(r)
+
+		session, err := a.auth.Session(r.Context(), token)
+		if err != nil {
+			a.authError(w, r, err)
+
+			return
+		}
+
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), sessionKey{}, session)))
+	})
+}
+
+// sessionFrom is the session authenticated put on the request. Only valid inside the private group.
+func sessionFrom(ctx context.Context) auth.Session {
+	session, _ := ctx.Value(sessionKey{}).(auth.Session)
+
+	return session
+}
 
 // requestLogger writes one line per request with OpenTelemetry attribute names (docs/reference/logs.md)
 // and returns the request ID as X-Request-Id so a client can quote it. It logs the route pattern

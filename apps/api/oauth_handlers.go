@@ -179,10 +179,7 @@ type identityJSON struct {
 
 // GET /v1/auth/identities → 200 {identities}: the provider accounts that sign in to this account.
 func (a *api) handleIdentities(w http.ResponseWriter, r *http.Request) {
-	session, ok := a.requireSession(w, r)
-	if !ok {
-		return
-	}
+	session := sessionFrom(r.Context())
 
 	identities, err := a.auth.Identities(r.Context(), session.UserID)
 	if err != nil {
@@ -201,11 +198,7 @@ func (a *api) handleIdentities(w http.ResponseWriter, r *http.Request) {
 
 // DELETE /v1/auth/identities/{provider} → 204. Email codes keep working, so this never locks anyone out.
 func (a *api) handleUnlinkIdentity(w http.ResponseWriter, r *http.Request) {
-	session, ok := a.requireSession(w, r)
-	if !ok {
-		return
-	}
-
+	session := sessionFrom(r.Context())
 	provider := chi.URLParam(r, "provider")
 
 	if err := a.auth.UnlinkIdentity(r.Context(), session.UserID, provider); err != nil {
@@ -216,20 +209,6 @@ func (a *api) handleUnlinkIdentity(w http.ResponseWriter, r *http.Request) {
 
 	slog.InfoContext(r.Context(), "identity unlinked", "event", "auth.identity_unlinked", "user_id", session.UserID, "provider", provider)
 	w.WriteHeader(http.StatusNoContent)
-}
-
-// requireSession answers 401 when the request carries no live session.
-func (a *api) requireSession(w http.ResponseWriter, r *http.Request) (auth.Session, bool) {
-	token, _ := a.sessionToken(r)
-
-	session, err := a.auth.Session(r.Context(), token)
-	if err != nil {
-		a.authError(w, r, err)
-
-		return auth.Session{}, false
-	}
-
-	return session, true
 }
 
 // GET /v1/auth/providers → 200 {providers}: the sign-in providers configured here, so clients only show

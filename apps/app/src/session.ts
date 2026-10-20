@@ -5,6 +5,8 @@ import { useOutletContext } from "react-router";
 
 export type AppContext = {
   session: Session | null | undefined;
+  /** The session couldn't be read (network, server): nobody knows yet whether you're signed in. */
+  failed: boolean;
   /** Re-read the session after it changed elsewhere (signing in on /login). */
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;

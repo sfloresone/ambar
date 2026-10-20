@@ -45,6 +45,8 @@
   --container-app: 100rem;
   /* Indeterminate ProgressBar: a segment crawling the track. Tailwind has no such keyframe. */
   --animate-crawl: crawl 1.25s ease-in-out infinite;
+  /* Sign-in showcase loop; the component sets duration and delay from SIGN_IN_DITHER.fps. */
+  --animate-sequence-frame: sequence-frame 3s step-end infinite;
 
   @keyframes crawl {
     from {
@@ -52,6 +54,17 @@
     }
     to {
       translate: 290% 0;
+    }
+  }
+
+  /* Each of the 12 stacked frames shows for its 1/12 of the loop (stepped opacity: compositor only). */
+  @keyframes sequence-frame {
+    0% {
+      opacity: 1;
+    }
+    8.3333%,
+    100% {
+      opacity: 0;
     }
   }
 }
