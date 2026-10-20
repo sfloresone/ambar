@@ -4,6 +4,7 @@ import { CheckIcon, ImageBrokenIcon, WarningCircleIcon } from "@phosphor-icons/r
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 
+import { ProgressBar } from "../../components/progress-bar.tsx";
 import { DEVELOP_FROM, DEVELOP_TO, EASE } from "../../lib/motion.ts";
 import { createMomentPreview, revokeMomentPreview, type MomentPreview } from "../../lib/preview.ts";
 import { cn } from "../../lib/utils.ts";
@@ -17,16 +18,13 @@ type MomentCardProps = {
   progress?: number;
 };
 
-const STATUS_TEXT: Record<Exclude<MomentStatus, "keeping">, string> = {
+const STATUS_TEXT: Record<MomentStatus, string> = {
   ready: "Ready to keep",
   waiting: "Waiting for you",
+  keeping: "Keeping…",
   kept: "Kept",
   failed: "Couldn't keep it yet",
 };
-
-function statusText(status: MomentStatus, progress: number): string {
-  return status === "keeping" ? `Keeping… ${Math.round(progress * 100)}%` : STATUS_TEXT[status];
-}
 
 export function MomentCard({ file, status, progress = 0 }: MomentCardProps) {
   const preview = useMomentPreview(file);
@@ -39,20 +37,20 @@ export function MomentCard({ file, status, progress = 0 }: MomentCardProps) {
     >
       <div className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-muted">
         {preview !== null && <PreviewMedia preview={preview} name={file.name} />}
-        {status === "keeping" && (
-          <span
-            aria-hidden
-            className="absolute inset-x-0 bottom-0 h-1 origin-left bg-leaf transition-[scale] duration-200 motion-reduce:transition-none"
-            style={{ scale: `${progress} 1` }}
-          />
-        )}
       </div>
-      <figcaption className="flex min-w-0 flex-col gap-0.5">
+      <figcaption className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="truncate text-sm font-medium">{file.name}</span>
-        <span aria-live="polite" className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <StatusIcon status={status} />
-          {statusText(status, progress)}
+          {/* Live for the steps only; the percent is the progress bar's (announcing every tick would be noise). */}
+          <span aria-live="polite">{STATUS_TEXT[status]}</span>
+          {status === "keeping" && progress > 0 && (
+            <span aria-hidden className="tabular-nums">
+              {Math.round(progress * 100)}%
+            </span>
+          )}
         </span>
+        {status === "keeping" && <ProgressBar size="sm" label={`Keeping ${file.name}`} value={progress > 0 ? progress : null} completeLabel="Kept" className="mt-1" />}
       </figcaption>
     </figure>
   );

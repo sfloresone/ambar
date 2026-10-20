@@ -7,6 +7,7 @@ import { ListBulletsIcon } from "@phosphor-icons/react";
 import { SegmentedControl, type SegmentIcon } from "../../components/segmented-control.tsx";
 import { KeepButton, KeepZone } from "./keep-zone.tsx";
 import { useLibrary } from "./library-context.tsx";
+import { SkeletonSwap } from "../../components/skeleton-swap.tsx";
 import { LoadingGrid } from "./loading-grid.tsx";
 import { MomentList } from "./moment-list.tsx";
 import { MOMENTS_VIEWS, useMomentsView, type MomentsView } from "./moments-view.ts";
@@ -57,11 +58,13 @@ export function LibraryScreen({ onOpenMoment }: LibraryScreenProps) {
         </div>
       </header>
 
-      {moments === null && <LoadingGrid />}
-      {moments?.length === 0 && <EmptyLibrary />}
-      {moments !== null &&
-        moments.length > 0 &&
-        (view === "list" ? <MomentList moments={moments} onOpen={onOpenMoment} /> : <Timeline moments={moments} onOpen={onOpenMoment} columns={GRID_COLUMNS[view]} />)}
+      {/* The grid's place is held while loading, then the moments fade in where the placeholders were. */}
+      <SkeletonSwap ready={moments !== null} label="Moments" skeleton={<LoadingGrid />} className={moments === null ? "min-h-[60svh]" : undefined}>
+        {moments?.length === 0 && <EmptyLibrary />}
+        {moments !== null &&
+          moments.length > 0 &&
+          (view === "list" ? <MomentList moments={moments} onOpen={onOpenMoment} /> : <Timeline moments={moments} onOpen={onOpenMoment} columns={GRID_COLUMNS[view]} />)}
+      </SkeletonSwap>
     </div>
   );
 }

@@ -1,0 +1,23 @@
+---
+import DevLayout from "../components/dev-layout.astro";
+import Specimen from "../components/specimen.astro";
+import Surface from "../components/surface.astro";
+import { ProgressBarDemo, SkeletonSwapDemo } from "../components/feedback-demos.tsx";
+---
+
+<DevLayout title="Feedback">
+  <p slot="lead" class="max-w-2xl text-muted-foreground">
+    What shows while something loads or uploads. Both follow the behavior and accessibility of interior.dev’s
+    Skeleton Swap and Progress Bar, built CSS first on Ambar tokens.
+  </p>
+
+  <Specimen title="SkeletonSwap" description="@ambar/ui/components/skeleton-swap. Skeleton and content share one box, so nothing below moves. Under 120 ms there is no skeleton; once shown it stays 380 ms. aria-busy while loading, “Note loaded” for screen readers. Used by the provider buttons, Settings and the library.">
+    <Surface tone="cloud"><SkeletonSwapDemo client:visible /></Surface>
+    <Surface tone="ink"><SkeletonSwapDemo client:visible /></Surface>
+  </Specimen>
+
+  <Specimen title="ProgressBar" description="@ambar/ui/components/progress-bar. A native progress element for assistive tech; on screen, a leaf fill in the tactile well. Crawls while the size is unknown, then fills; “Kept” is announced at 100%. md shows the label and percent; sm is the bar alone (the keep flow's moment card). Reduced motion: no crawl, no easing.">
+    <Surface tone="cloud"><ProgressBarDemo client:visible /></Surface>
+    <Surface tone="ink"><ProgressBarDemo client:visible /></Surface>
+  </Specimen>
+</DevLayout>

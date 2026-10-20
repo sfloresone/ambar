@@ -27,6 +27,11 @@ export const devSections: DevSection[] = [
     description: "Variants, sizes, icons and states, plus lab candidates.",
   },
   {
+    slug: "feedback",
+    title: "Feedback",
+    description: "Loading without jumps: SkeletonSwap, and ProgressBar for uploads. Replayable.",
+  },
+  {
     slug: "team",
     title: "Team",
     description: "Portrait cards, placeholders and accessible social links on both surfaces.",
