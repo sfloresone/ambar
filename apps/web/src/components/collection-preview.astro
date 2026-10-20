@@ -1,0 +1,30 @@
+---
+import { momentImage } from "@ambar/core";
+import { createMockLibrary } from "@ambar/ui/lib/library-mock";
+import { CollectionFolder } from "@ambar/ui/screens/library/collection-folder";
+
+// Read the app's example content at build time; no library client is sent to the browser.
+const library = createMockLibrary();
+
+const [collections, moments] = await Promise.all([library.listCollections(), library.listMoments()]);
+
+const examples = collections.filter((collection) => collection.id === "recipes" || collection.id === "architecture").map((collection) => {
+  const items = moments.filter((moment) => moment.collectionIds.includes(collection.id));
+  const images = items.map(momentImage).filter((src) => src !== undefined).slice(0, 3);
+
+  return { collection, count: items.length, images };
+});
+---
+
+<div data-collection-preview class="relative h-40 w-full max-w-[23rem] shrink-0 self-center min-[360px]:h-44 lg:h-48 lg:self-auto">
+  <div class="absolute bottom-0 left-1/2 flex w-max origin-bottom -translate-x-1/2 -space-x-12 scale-[0.64] min-[360px]:scale-75 lg:scale-[0.85]">
+    {
+      examples.map(({ collection, count, images }) => (
+        <figure class="shrink-0">
+          <CollectionFolder name={collection.name} count={count} tone={collection.tone} images={images} />
+          <figcaption class="sr-only">Example collection: {collection.name}, {count} moments.</figcaption>
+        </figure>
+      ))
+    }
+  </div>
+</div>

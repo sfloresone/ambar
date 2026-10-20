@@ -200,25 +200,129 @@ func consumeToken(tokenHash []byte) check {
 }
 
 // createSession finds or creates the user (verifying their email) and opens a session for this device.
-// created: xmax = 0 means the user row was inserted, not updated.
 func createSession(ctx context.Context, tx pgx.Tx, email string, tokenHash []byte, userAgent string) (Session, bool, error) {
-	session := Session{Email: email}
+	userID, created, err := upsertUser(ctx, tx, email)
+	if err != nil {
+		return Session{}, false, err
+	}
 
-	var created bool
+	session, err := insertSession(ctx, tx, userID, email, tokenHash, userAgent)
 
+	return session, created, err
+}
+
+// upsertUser finds or creates the user for a verified email. created: xmax = 0 means the row was
+// inserted, not updated.
+func upsertUser(ctx context.Context, tx pgx.Tx, email string) (userID string, created bool, err error) {
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO users (email, email_verified_at) VALUES ($1, now())
 		ON CONFLICT (email) DO UPDATE SET email_verified_at = coalesce(users.email_verified_at, now())
-		RETURNING id::text, (xmax = 0)`, email).Scan(&session.UserID, &created); err != nil {
-		return Session{}, false, fmt.Errorf("upsert user: %w", err)
+		RETURNING id::text, (xmax = 0)`, email).Scan(&userID, &created); err != nil {
+		return "", false, fmt.Errorf("upsert user: %w", err)
 	}
+
+	return userID, created, nil
+}
+
+func insertSession(ctx context.Context, tx pgx.Tx, userID, email string, tokenHash []byte, userAgent string) (Session, error) {
+	session := Session{UserID: userID, Email: email}
 
 	err := tx.QueryRow(ctx, `
 		INSERT INTO sessions (token_hash, user_id, user_agent, expires_at)
 		VALUES ($1, $2, left($3, 256), now() + make_interval(secs => $4))
-		RETURNING expires_at`, tokenHash, session.UserID, userAgent, SessionTTL.Seconds()).Scan(&session.ExpiresAt)
+		RETURNING expires_at`, tokenHash, userID, userAgent, SessionTTL.Seconds()).Scan(&session.ExpiresAt)
+
+	return session, err
+}
+
+// signInIdentity opens a session for a provider identity in one transaction. A known identity signs in
+// its user; a new one joins the account with the same (provider-verified) email, or creates it.
+func (s store) signInIdentity(ctx context.Context, provider, subject, email string, tokenHash []byte, userAgent string) (Session, bool, error) {
+	var (
+		session Session
+		created bool
+	)
+
+	err := pgx.BeginFunc(ctx, s.db, func(tx pgx.Tx) error {
+		var userID, userEmail string
+
+		err := tx.QueryRow(ctx, `
+			SELECT u.id::text, u.email
+			FROM user_identities i JOIN users u ON u.id = i.user_id
+			WHERE i.provider = $1 AND i.subject = $2`, provider, subject).Scan(&userID, &userEmail)
+
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+			userEmail = email
+
+			if userID, created, err = upsertUser(ctx, tx, email); err != nil {
+				return err
+			}
+
+			// DO NOTHING: a parallel callback for the same identity already linked it.
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO user_identities (user_id, provider, subject, email) VALUES ($1, $2, $3, $4)
+				ON CONFLICT (provider, subject) DO NOTHING`, userID, provider, subject, email); err != nil {
+				return fmt.Errorf("link identity: %w", err)
+			}
+		case err != nil:
+			return err
+		}
+
+		// The account keeps its own email even if the provider's changed since it was linked.
+		session, err = insertSession(ctx, tx, userID, userEmail, tokenHash, userAgent)
+
+		return err
+	})
 
 	return session, created, err
+}
+
+func (s store) identities(ctx context.Context, userID string) ([]Identity, error) {
+	rows, err := s.db.Query(ctx, `
+		SELECT provider, email, created_at FROM user_identities WHERE user_id = $1 ORDER BY provider`, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (Identity, error) {
+		var identity Identity
+
+		err := row.Scan(&identity.Provider, &identity.Email, &identity.LinkedAt)
+
+		return identity, err
+	})
+}
+
+// linkIdentity inserts the identity; when either unique key already holds, it tells which case it is.
+func (s store) linkIdentity(ctx context.Context, userID, provider, subject, email string) error {
+	tag, err := s.db.Exec(ctx, `
+		INSERT INTO user_identities (user_id, provider, subject, email) VALUES ($1, $2, $3, $4)
+		ON CONFLICT DO NOTHING`, userID, provider, subject, email)
+	if err != nil || tag.RowsAffected() == 1 {
+		return err
+	}
+
+	var owner string
+
+	err = s.db.QueryRow(ctx, `SELECT user_id::text FROM user_identities WHERE provider = $1 AND subject = $2`, provider, subject).Scan(&owner)
+
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		return ErrProviderLinked
+	case err != nil:
+		return err
+	case owner != userID:
+		return ErrIdentityTaken
+	}
+
+	return nil
+}
+
+func (s store) unlinkIdentity(ctx context.Context, userID, provider string) error {
+	_, err := s.db.Exec(ctx, `DELETE FROM user_identities WHERE user_id = $1 AND provider = $2`, userID, provider)
+
+	return err
 }
 
 // session reads a live session and slides its expiry when a renewal is due, never past sessionMaxAge

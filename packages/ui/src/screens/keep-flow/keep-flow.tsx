@@ -1,11 +1,12 @@
 // Keep flow: email → 6-digit code (or the email link) → keeping (upload) → kept → into the app, with the
 // user's moment in view the whole time. The mode (sign in / sign up) changes the words; the backend flow
 // is the same, and verifying says whether the account was just created. Used through AuthFlow.
-import type { CodeRequest, SignedIn } from "@ambar/core";
+import { PROVIDER_ERROR_COPY, type AuthReturn, type CodeRequest, type SignedIn } from "@ambar/core";
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useEffectEvent, useMemo, useRef, useState, type ComponentType, type ReactNode, type Ref } from "react";
 
 import { Button } from "../../components/button.tsx";
+import { ProviderButtons } from "../../components/provider-buttons.tsx";
 import { createClients, MOCK_CODE, mockLinkToken } from "../../lib/clients.ts";
 import { EASE } from "../../lib/motion.ts";
 import { clearPendingMoment, loadPendingMoment, savePendingMoment } from "../../lib/pending-moment.ts";
@@ -26,6 +27,7 @@ type Step =
   | { name: "email" }
   | { name: "code"; request: CodeRequest }
   | { name: "verifying-link" }
+  | { name: "returning" }
   | { name: "keeping"; signedIn: SignedIn; progress: number }
   | { name: "failed"; signedIn: SignedIn }
   | { name: "done"; signedIn: SignedIn };
@@ -44,12 +46,14 @@ type KeepFlowProps = {
   apiUrl?: string;
   /** Called once signed in (and the moment kept). Each platform decides where that goes. */
   onDone: (signedIn: SignedIn) => void;
-  /** Token from the email link (?verify=…), to finish sign-in without the code. */
-  verifyToken?: string;
+  /** What the browser came back with (read from the URL by the platform): the email link or a provider's answer. */
+  authReturn?: AuthReturn;
   /** Sign in or sign up: the words on each step. */
   mode: AuthMode;
   /** The page the email link opens: where this flow runs, so the link finds the pending moment. */
   returnTo?: string;
+  /** Where Google or GitHub send the browser back; with a moment it must be this page (the moment is saved here). */
+  providerReturnTo?: (hasMoment: boolean) => string;
   /** Under the email form only (e.g. the link to switch between sign in and sign up). */
   emailFooter?: ReactNode;
   /** Heading element. The landing dialog passes Base UI's Dialog.Title so the dialog stays named. */
@@ -68,12 +72,13 @@ function DefaultTitle({ ref, children, ...props }: TitleProps) {
   );
 }
 
-export function KeepFlow({ file: droppedFile = null, apiUrl, onDone, verifyToken, mode, returnTo, emailFooter, Title = DefaultTitle }: KeepFlowProps) {
+export function KeepFlow({ file: droppedFile = null, apiUrl, onDone, authReturn, mode, returnTo, providerReturnTo, emailFooter, Title = DefaultTitle }: KeepFlowProps) {
   const clients = useMemo(() => createClients(apiUrl), [apiUrl]);
   const reduceMotion = useReducedMotion() === true;
   const [file, setFile] = useState<File | null>(droppedFile);
   const [email, setEmail] = useState(readLastEmail);
-  const [step, setStep] = useState<Step>(verifyToken === undefined ? { name: "email" } : { name: "verifying-link" });
+  const [step, setStep] = useState<Step>(() => firstStep(authReturn));
+  const [returnedError, setReturnedError] = useState(authReturn?.kind === "error" ? PROVIDER_ERROR_COPY[authReturn.code] : "");
   const titleRef = useRef<HTMLHeadingElement>(null);
 
   // Keep the dropped file on this origin until it is uploaded; or pick up one saved earlier.
@@ -145,11 +150,36 @@ export function KeepFlow({ file: droppedFile = null, apiUrl, onDone, verifyToken
       .catch(() => setStep({ name: "email" }));
   });
 
+  // Back from Google or GitHub signed in (the session cookie is set): read it, then keep the pending moment.
+  const finishProvider = useEffectEvent((created: boolean) => {
+    void clients.auth
+      .getSession()
+      .then(async (session) => {
+        if (session === null) {
+          setReturnedError(PROVIDER_ERROR_COPY["oauth-failed"]);
+          setStep({ name: "email" });
+
+          return;
+        }
+
+        const pending = droppedFile ?? (await loadPendingMoment());
+
+        setFile(pending);
+        await keep({ session, created }, pending);
+      })
+      .catch(() => {
+        setReturnedError(PROVIDER_ERROR_COPY["oauth-failed"]);
+        setStep({ name: "email" });
+      });
+  });
+
   useEffect(() => {
-    if (verifyToken !== undefined) {
-      verifyLink(verifyToken);
+    if (authReturn?.kind === "verify") {
+      verifyLink(authReturn.token);
+    } else if (authReturn?.kind === "provider") {
+      finishProvider(authReturn.created);
     }
-  }, [verifyToken]);
+  }, [authReturn]);
 
   async function requestCode(nextEmail: string) {
     const request = await clients.auth.requestCode(nextEmail, { returnTo });
@@ -166,6 +196,7 @@ export function KeepFlow({ file: droppedFile = null, apiUrl, onDone, verifyToken
   const status: MomentStatus =
     step.name === "keeping" ? "keeping" : step.name === "failed" ? "failed" : step.name === "done" ? "kept" : step.name === "code" ? "waiting" : "ready";
 
+  const providerBack = providerReturnTo?.(file !== null) ?? returnTo;
   const copy = stepCopy(step, { mode, email, hasMoment: file !== null });
 
   // Each step's copy and controls settle in; the moment card in between stays put across steps.
@@ -190,7 +221,8 @@ export function KeepFlow({ file: droppedFile = null, apiUrl, onDone, verifyToken
 
         {step.name === "email" && (
           <>
-            <EmailStep defaultEmail={email} onSubmit={requestCode} />
+            <EmailStep defaultEmail={email} initialError={returnedError} onSubmit={requestCode} />
+            {providerBack !== undefined && <ProviderButtons auth={clients.auth} returnTo={providerBack} />}
             {emailFooter}
           </>
         )}
@@ -231,6 +263,17 @@ export function KeepFlow({ file: droppedFile = null, apiUrl, onDone, verifyToken
   );
 }
 
+function firstStep(authReturn: AuthReturn | undefined): Step {
+  switch (authReturn?.kind) {
+    case "verify":
+      return { name: "verifying-link" };
+    case "provider":
+      return { name: "returning" };
+    default:
+      return { name: "email" };
+  }
+}
+
 /** Heading and lead of each step. */
 type StepCopy = {
   title: string;
@@ -257,6 +300,8 @@ function stepCopy(step: Step, { mode, email, hasMoment }: CopyContext): StepCopy
       return { title: "Check your inbox", lead: `We sent a 6-digit code to ${email}. It also has a link, if that's easier.` };
     case "verifying-link":
       return { title: "Signing you in…", lead: "One moment while we check your link." };
+    case "returning":
+      return { title: "Signing you in…", lead: "Welcome back. One moment." };
     case "keeping":
       return { title: "Keeping it…", lead: "You're in. Your moment is on its way." };
     case "failed":

@@ -67,6 +67,8 @@ type IrisProps = {
   state: IrisState;
   /** Closing only: close onto this point instead of the viewport center. */
   origin?: IrisOrigin;
+  /** What the iris closes onto and carries to the center (a square). Defaults to the Ambar mark. */
+  mark?: ReactNode;
   onDone?: () => void;
 };
 
@@ -76,7 +78,7 @@ function radiusFrom(x: number, y: number) {
 }
 
 
-export function Iris({ state, origin, onDone }: IrisProps) {
+export function Iris({ state, origin, mark: content = <Mark className="size-full" />, onDone }: IrisProps) {
   const hole = useRef<HTMLDivElement>(null);
   const mark = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion() === true;
@@ -102,9 +104,12 @@ export function Iris({ state, origin, onDone }: IrisProps) {
   // Once, at mount: the iris is mounted for a single close or open.
   useLayoutEffect(() => measure(), []);
 
+  // The latest onDone when the animation ends: the page may have re-rendered (e.g. changed route) meanwhile.
+  const finish = useEffectEvent(() => onDone?.());
+
   const start = useEffectEvent(() => {
     if (hole.current === null || mark.current === null || reduceMotion) {
-      onDone?.();
+      finish();
 
       return;
     }
@@ -133,7 +138,7 @@ export function Iris({ state, origin, onDone }: IrisProps) {
       }
 
       if (!cancelled) {
-        onDone?.();
+        finish();
       }
     }
 
@@ -169,7 +174,7 @@ export function Iris({ state, origin, onDone }: IrisProps) {
       />
       {/* Centered at its final size; when closing from an origin it starts translated and scaled over the logo. */}
       <div ref={mark} className="absolute top-1/2 left-1/2 -mt-12 -ml-12 size-24 origin-center">
-        <Mark className="size-full" />
+        {content}
       </div>
     </div>,
     document.body,

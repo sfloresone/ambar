@@ -4,6 +4,8 @@ import { apiUrl } from "@/lib/api-url.ts";
 import { onboardingBackdrop } from "@/lib/onboarding.ts";
 import DevLayout from "../components/dev-layout.astro";
 import Specimen from "../components/specimen.astro";
+import Surface from "../components/surface.astro";
+import { SignInMethodsDemo } from "../components/sign-in-methods-demo.tsx";
 
 const steps = [
   { at: "Drop", what: "The dialog widens; the moment card pins left and says “Ready to keep”. Email field is focused." },
@@ -23,12 +25,17 @@ const steps = [
 
   <Specimen title="From “Start keeping”" description="Exactly what the landing does. This dialog also handles the email link.">
     <div class="flex flex-col items-start gap-5 rounded-2xl border p-6">
-      <FirstMomentDialog client:load continueHref="#" backdropSrc={onboardingBackdrop} apiUrl={apiUrl} handlesVerifyLink size="md" label="Start keeping" />
+      <FirstMomentDialog client:load continueHref="#" backdropSrc={onboardingBackdrop} apiUrl={apiUrl} handlesAuthReturn size="md" label="Start keeping" />
     </div>
     <ol class="flex flex-col gap-2.5 rounded-2xl border p-6 text-sm">
       {steps.map((step) => (
         <li class="grid grid-cols-[5rem_1fr] gap-3"><span class="font-medium">{step.at}</span><span class="text-muted-foreground">{step.what}</span></li>
       ))}
     </ol>
+  </Specimen>
+
+  <Specimen title="Settings · Sign-in methods" description="@ambar/ui/screens/settings/sign-in-methods, on the mock. Connect plays the provider handoff and comes back connected; Disconnect is one tap with a toast. Email and password is a placeholder until passwords exist.">
+    <Surface tone="cloud"><SignInMethodsDemo client:only="react" /></Surface>
+    <Surface tone="ink"><SignInMethodsDemo client:only="react" /></Surface>
   </Specimen>
 </DevLayout>

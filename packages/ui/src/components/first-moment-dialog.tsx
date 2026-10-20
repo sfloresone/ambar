@@ -1,4 +1,5 @@
 // "Start keeping" onboarding. Base UI Dialog handles focus trap, Escape and returning focus to the trigger.
+import { AUTH_RETURN_PARAMS, readAuthReturn, type AuthReturn } from "@ambar/core";
 import { Dialog } from "@base-ui/react/dialog";
 import { XIcon } from "@phosphor-icons/react";
 import { lazy, Suspense, useEffect, useState, type ComponentType } from "react";
@@ -59,10 +60,11 @@ type FirstMomentDialogProps = {
   /** Real API base URL for the keep flow; unset = mock clients. */
   apiUrl?: string;
   /**
-   * The page that handles the email link (?verify=…). Exactly one dialog per page should set it, so the
-   * link reopens one dialog, not every "Start keeping" button.
+   * The dialog that finishes a sign-in that comes back to this page: the email link (?verify=) or Google /
+   * GitHub (?oauth=, ?error=). Exactly one dialog per page should set it, so one dialog reopens, not every
+   * "Start keeping" button.
    */
-  handlesVerifyLink?: boolean;
+  handlesAuthReturn?: boolean;
   /** sign-up (default, "Start keeping"): the moment first, then email and code. sign-in: email and code. */
   mode?: AuthMode;
   /** Extra classes for the trigger button (e.g. rounded-full in the header pill). */
@@ -76,7 +78,7 @@ export function FirstMomentDialog({
   continueHref,
   backdropSrc,
   apiUrl,
-  handlesVerifyLink = false,
+  handlesAuthReturn = false,
   mode = "sign-up",
   className,
   label = mode === "sign-in" ? "Sign in" : "Start keeping",
@@ -85,28 +87,33 @@ export function FirstMomentDialog({
 }: FirstMomentDialogProps) {
   const warm = () => preload(backdropSrc);
   const [open, setOpen] = useState(false);
-  const [verifyToken, setVerifyToken] = useState<string | undefined>(undefined);
+  const [authReturn, setAuthReturn] = useState<AuthReturn | undefined>(undefined);
 
-  // The email link lands here with ?verify=…: reopen the flow to finish signing in, then clean the URL.
+  // The email link (?verify=) or a provider (?oauth=, ?error=) lands here: reopen the flow to finish, and
+  // clean the URL (one-time values never linger in history).
   // An effect on purpose: the URL only exists in the browser, not while Astro renders the island.
   useEffect(() => {
-    if (!handlesVerifyLink) {
+    if (!handlesAuthReturn) {
       return;
     }
 
     const url = new URL(window.location.href);
-    const token = url.searchParams.get("verify");
+    const found = readAuthReturn(url.searchParams);
 
-    if (token === null) {
+    // "linked" belongs to Settings (connecting a provider), not to a sign-in.
+    if (found === null || found.kind === "linked") {
       return;
     }
 
-    url.searchParams.delete("verify");
+    for (const param of AUTH_RETURN_PARAMS) {
+      url.searchParams.delete(param);
+    }
+
     window.history.replaceState(null, "", url);
     // oxlint-disable-next-line react/set-state-in-effect -- syncing from the URL, which only exists in the browser.
-    setVerifyToken(token);
+    setAuthReturn(found);
     setOpen(true);
-  }, [handlesVerifyLink]);
+  }, [handlesAuthReturn]);
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
@@ -135,7 +142,7 @@ export function FirstMomentDialog({
             <XIcon weight="bold" />
           </Dialog.Close>
           <Suspense fallback={<div className="min-h-96" />}>
-            <OnboardingContent continueHref={continueHref} backdropSrc={backdropSrc} apiUrl={apiUrl} verifyToken={verifyToken} mode={mode} />
+            <OnboardingContent continueHref={continueHref} backdropSrc={backdropSrc} apiUrl={apiUrl} authReturn={authReturn} mode={mode} />
           </Suspense>
         </Dialog.Popup>
       </Dialog.Portal>

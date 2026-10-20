@@ -42,6 +42,10 @@ var (
 	// ErrUnavailable: the email could not be sent; nothing was kept, so a retry sends a fresh one.
 	ErrUnavailable = errors.New("email provider unavailable")
 	ErrNoSession   = errors.New("no session")
+	// ErrIdentityTaken: that provider account already signs in to another Ambar account.
+	ErrIdentityTaken = errors.New("identity linked to another account")
+	// ErrProviderLinked: this account already has an account at that provider.
+	ErrProviderLinked = errors.New("provider already linked")
 )
 
 // Mailer sends the sign-in email. key makes retries idempotent at the provider.
@@ -188,6 +192,55 @@ func (s *Service) signIn(ctx context.Context, consume check, userAgent string) (
 	}
 
 	return Verified{Session: session, Token: token, Created: created}, nil
+}
+
+// SignInWithProvider signs in someone a provider (Google, GitHub) vouched for: subject is the provider's
+// stable id, email one the provider verified. Linking by that email keeps one account per person.
+func (s *Service) SignInWithProvider(ctx context.Context, provider, subject, email, userAgent string) (Verified, error) {
+	email = NormalizeEmail(email)
+	if subject == "" || !plausibleEmail.MatchString(email) {
+		return Verified{}, ErrInvalidEmail
+	}
+
+	token, err := newToken()
+	if err != nil {
+		return Verified{}, err
+	}
+
+	session, created, err := s.store.signInIdentity(ctx, provider, subject, email, hashToken(token), userAgent)
+	if err != nil {
+		return Verified{}, err
+	}
+
+	return Verified{Session: session, Token: token, Created: created}, nil
+}
+
+// Identity is a provider account that signs in to a user: shown in Settings as a sign-in method.
+type Identity struct {
+	Provider string
+	Email    string
+	LinkedAt time.Time
+}
+
+// Identities lists the provider accounts that sign in to the user, by provider.
+func (s *Service) Identities(ctx context.Context, userID string) ([]Identity, error) {
+	return s.store.identities(ctx, userID)
+}
+
+// LinkIdentity connects a provider account to a signed-in user (Settings → Connect). Linking the same one
+// again is a no-op; one that opens another account is ErrIdentityTaken.
+func (s *Service) LinkIdentity(ctx context.Context, userID, provider, subject, email string) error {
+	if subject == "" {
+		return ErrInvalidEmail
+	}
+
+	return s.store.linkIdentity(ctx, userID, provider, subject, NormalizeEmail(email))
+}
+
+// UnlinkIdentity disconnects the user's account at provider. Email codes keep working, so it never locks
+// anyone out.
+func (s *Service) UnlinkIdentity(ctx context.Context, userID, provider string) error {
+	return s.store.unlinkIdentity(ctx, userID, provider)
 }
 
 // Session is the live session for token, renewed if it is due. ErrNoSession when missing, expired or

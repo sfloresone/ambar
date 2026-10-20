@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/httprate"
 
 	"ambar/api/auth"
+	"ambar/api/oauth"
 )
 
 // pinger is what the health check needs from the database (the pgx pool, or a fake in tests).
@@ -27,6 +28,8 @@ type api struct {
 	logger         *slog.Logger
 	db             pinger
 	auth           *auth.Service
+	providers      map[string]*oauth.Provider
+	appURL         string
 	allowedOrigins []string
 	trustProxy     bool
 	secureCookie   bool
@@ -57,6 +60,12 @@ func newRouter(a *api) http.Handler {
 			r.With(rateLimit(60, time.Hour)).Post("/email/verify", a.handleVerifyEmail)
 			r.Get("/session", a.handleGetSession)
 			r.Delete("/session", a.handleSignOut)
+			// Browser navigations, not fetches: the state cookie is the CSRF check (docs/decisions/0005).
+			r.Get("/providers", a.handleProviders)
+			r.Get("/identities", a.handleIdentities)
+			r.Delete("/identities/{provider}", a.handleUnlinkIdentity)
+			r.With(rateLimit(60, time.Hour)).Get("/oauth/{provider}", a.handleOAuthStart)
+			r.With(rateLimit(60, time.Hour)).Get("/oauth/{provider}/callback", a.handleOAuthCallback)
 		})
 	})
 
