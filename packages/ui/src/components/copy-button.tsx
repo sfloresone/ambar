@@ -61,13 +61,13 @@ export function CopyButton({ value, onCopy, label = "Copy link", copiedLabel = "
     >
       <span className="grid">
         <LinkSimpleIcon weight="bold" aria-hidden className={cn(LAYER, copied && "opacity-0")} />
-        <CheckIcon weight="bold" aria-hidden className={cn(LAYER, "text-leaf", !copied && "opacity-0")} />
+        <CheckIcon weight="bold" aria-hidden className={cn(LAYER, "text-link", !copied && "opacity-0")} />
       </span>
       <span className="grid">
         <span aria-hidden={status !== null} className={cn(LAYER, status !== null && "opacity-0")}>
           {label}
         </span>
-        <span aria-hidden={status === null} className={cn(LAYER, copied ? "text-leaf" : "text-destructive", status === null && "opacity-0")}>
+        <span aria-hidden={status === null} className={cn(LAYER, copied ? "text-link" : "text-destructive", status === null && "opacity-0")}>
           {feedback}
         </span>
       </span>

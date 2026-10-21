@@ -58,7 +58,7 @@ export function MomentCard({ file, status, progress = 0 }: MomentCardProps) {
 
 function StatusIcon({ status }: { status: MomentStatus }) {
   if (status === "kept") {
-    return <CheckIcon weight="bold" aria-hidden className="size-4 text-leaf" />;
+    return <CheckIcon weight="bold" aria-hidden className="size-4 text-link" />;
   }
 
   if (status === "failed") {

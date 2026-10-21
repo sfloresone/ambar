@@ -153,7 +153,7 @@ export function LiveDitherControls({ config, palette, onChange, onLoadSaved }: {
             <span>{name} <span className="text-muted-foreground">{palette[name]}</span></span>
           </span>
         ))}
-        <a href="/dev/colors" className="text-leaf underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring">Color reference</a>
+        <a href="/dev/colors" className="text-link underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring">Color reference</a>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <label htmlFor={`${id}-pattern`} className="flex flex-col gap-2 text-sm font-medium">

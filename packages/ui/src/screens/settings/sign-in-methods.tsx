@@ -112,7 +112,7 @@ export function SignInMethods({ auth, returnTo }: SignInMethodsProps) {
               actions={phase}
             >
               {identity !== undefined && (
-                <span className="flex items-center gap-1.5 text-xs font-medium text-leaf">
+                <span className="flex items-center gap-1.5 text-xs font-medium text-link">
                   <CheckCircleIcon weight="fill" aria-hidden className="size-4" />
                   Connected
                 </span>

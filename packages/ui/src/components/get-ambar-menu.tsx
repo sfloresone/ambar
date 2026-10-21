@@ -25,7 +25,7 @@ export function GetAmbarMenu({ container }: { container?: MenuContainer }) {
 
           const content = (
             <>
-              <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-muted text-ink">
+              <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-muted text-foreground">
                 <PlatformIcon weight="bold" aria-hidden />
               </span>
               <span className="flex min-w-0 flex-1 flex-col">
