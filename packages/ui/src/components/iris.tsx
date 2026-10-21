@@ -195,6 +195,19 @@ export function useIrisExit(onClosed: () => void): IrisExit {
   const logoRef = useRef<HTMLDivElement>(null);
   const [origin, setOrigin] = useState<IrisOrigin | null>(null);
 
+  // Back from where it led (page restored from the bfcache, shut): open the page again, never a frozen iris.
+  useEffect(() => {
+    function restored(event: PageTransitionEvent) {
+      if (event.persisted) {
+        setOrigin(null);
+      }
+    }
+
+    window.addEventListener("pageshow", restored);
+
+    return () => window.removeEventListener("pageshow", restored);
+  }, []);
+
   return {
     logoRef,
     close: () => setOrigin(irisOriginOf(logoRef.current)),

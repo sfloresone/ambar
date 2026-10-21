@@ -22,6 +22,9 @@ export const PROVIDER_ERROR_COPY = {
   "oauth-taken": "That account already opens another Ambar. Sign in with it to use it there.",
 } as const satisfies Record<ProviderErrorCode, string>;
 
+/** The email link didn't sign in: expired, already used, or its code was used first. */
+export const LINK_ERROR_COPY = "This link has expired or was already used. Get a new code below.";
+
 function isProviderError(code: string): code is ProviderErrorCode {
   return Object.hasOwn(PROVIDER_ERROR_COPY, code);
 }
