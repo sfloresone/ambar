@@ -1,7 +1,7 @@
 // Keep flow: email → 6-digit code (or the email link) → keeping (upload) → kept → into the app, with the
 // user's moment in view the whole time. The mode (sign in / sign up) changes the words; the backend flow
 // is the same, and verifying says whether the account was just created. Used through AuthFlow.
-import { PROVIDER_ERROR_COPY, type AuthReturn, type CodeRequest, type SignedIn } from "@ambar/core";
+import { AuthError, LINK_ERROR_COPY, PROVIDER_ERROR_COPY, type AuthReturn, type CodeRequest, type SignedIn } from "@ambar/core";
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useEffectEvent, useMemo, useRef, useState, type ComponentType, type ReactNode, type Ref } from "react";
 
@@ -147,7 +147,13 @@ export function KeepFlow({ file: droppedFile = null, apiUrl, onDone, authReturn,
         setFile(pending);
         await keep(signedIn, pending);
       })
-      .catch(() => setStep({ name: "email" }));
+      .catch((cause: unknown) => {
+        // Say why, then let them ask for a new code: the client already words network and rate-limit failures.
+        const worded = cause instanceof AuthError && (cause.code === "network" || cause.code === "rate-limited");
+
+        setReturnedError(worded ? cause.message : LINK_ERROR_COPY);
+        setStep({ name: "email" });
+      });
   });
 
   // Back from Google or GitHub signed in (the session cookie is set): read it, then keep the pending moment.
