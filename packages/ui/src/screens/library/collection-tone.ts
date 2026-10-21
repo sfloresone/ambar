@@ -4,8 +4,8 @@ import type { CollectionTone } from "@ambar/core";
 export const COLLECTION_TONE = {
   sky: "bg-sky text-ink",
   leaf: "bg-leaf text-cloud",
-  ink: "bg-ink text-cloud",
-  cloud: "bg-muted text-ink",
+  ink: "bg-ink text-cloud dark:bg-cloud dark:text-ink",
+  cloud: "bg-muted text-ink dark:bg-secondary dark:text-foreground",
 } as const satisfies Record<CollectionTone, string>;
 
 /**
@@ -15,6 +15,6 @@ export const COLLECTION_TONE = {
 export const COLLECTION_GLASS = {
   sky: "bg-linear-to-b from-sky/20 via-sky/90 via-55% to-sky text-ink",
   leaf: "bg-linear-to-b from-leaf/25 via-leaf/90 via-55% to-leaf text-cloud",
-  ink: "bg-linear-to-b from-ink/25 via-ink/90 via-55% to-ink text-cloud",
-  cloud: "bg-linear-to-b from-muted/35 via-muted/90 via-55% to-muted text-ink",
+  ink: "bg-linear-to-b from-ink/25 via-ink/90 via-55% to-ink text-cloud dark:from-cloud/20 dark:via-cloud/90 dark:to-cloud dark:text-ink",
+  cloud: "bg-linear-to-b from-muted/35 via-muted/90 via-55% to-muted text-ink dark:from-secondary/35 dark:via-secondary/90 dark:to-secondary dark:text-foreground",
 } as const satisfies Record<CollectionTone, string>;

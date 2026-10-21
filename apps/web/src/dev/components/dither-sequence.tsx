@@ -263,7 +263,7 @@ export function DitherSequence() {
         <a
           href={live ? recipe ? `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(recipe, null, 2))}` : undefined : sources[frame]}
           download={live ? "ambar-live-dither.json" : `${profile}-frame-${String(frame + 1).padStart(2, "0")}.webp`}
-          className="self-start text-sm font-medium text-leaf underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-4 focus-visible:outline-ring"
+          className="self-start text-sm font-medium text-link underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-4 focus-visible:outline-ring"
         >
           {live ? "Download settings for all 12 frames" : "Download this frame"}
         </a>
@@ -280,7 +280,7 @@ export function DitherSequence() {
               aria-label={`Inspect frame ${index + 1}`}
               aria-pressed={frame === index}
               onClick={() => seek(index)}
-              className="flex cursor-pointer flex-col gap-2 rounded-lg border border-transparent p-1.5 text-muted-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-ring aria-pressed:border-leaf aria-pressed:text-leaf"
+              className="flex cursor-pointer flex-col gap-2 rounded-lg border border-transparent p-1.5 text-muted-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-ring aria-pressed:border-link aria-pressed:text-link"
             >
               <img src={src} alt="" width={600} height={800} className="aspect-3/4 w-full rounded object-cover" />
               <span className="text-xs font-medium tabular-nums">{String(index + 1).padStart(2, "0")}</span>

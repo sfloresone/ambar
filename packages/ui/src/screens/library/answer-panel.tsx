@@ -122,7 +122,7 @@ function BestActions({ moment, copied, onOpen }: { moment: Moment; copied: Copie
 
   return (
     <div className="flex flex-col gap-3">
-      <p aria-live="polite" className={cn("flex items-center gap-1.5 text-sm font-medium", blocked ? "text-foreground" : "text-leaf")}>
+      <p aria-live="polite" className={cn("flex items-center gap-1.5 text-sm font-medium", blocked ? "text-foreground" : "text-link")}>
         {copied === "image" || copied === "link" ? (
           <>
             <CheckIcon weight="bold" aria-hidden className="size-4" />

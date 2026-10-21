@@ -12,7 +12,7 @@ const { showCallToAction = true } = Astro.props;
 const release = `v${version}${buildCommit ? ` · Build ${buildCommit}` : ""}`;
 ---
 
-<footer class="mx-auto flex max-w-5xl flex-col gap-8 bg-cloud px-6 pb-4">
+<footer class="mx-auto flex max-w-5xl flex-col gap-8 bg-background px-6 pb-4">
   <Closing showCallToAction={showCallToAction} />
   <div class="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
     <span>© {new Date().getFullYear()} Ambar</span>
