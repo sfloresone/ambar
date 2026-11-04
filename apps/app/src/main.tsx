@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router";
 
 import "@ambar/ui/globals.css";
+import { ThemeProvider } from "@ambar/ui/components/theme-provider";
 import { router } from "./router.tsx";
 
 const root = document.getElementById("root");
@@ -13,6 +14,8 @@ if (root === null) {
 
 createRoot(root).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <ThemeProvider>
+      <RouterProvider router={router} />
+    </ThemeProvider>
   </StrictMode>,
 );

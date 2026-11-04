@@ -56,7 +56,7 @@ export function PricingPlans({ plans, appUrl, onboardingBackdrop, apiUrl, seed, 
               <ul className="flex flex-col gap-2.5 text-sm">
                 {[plan.storage, plan.readings, plan.moments].map((line) => (
                   <li key={line} className="flex items-center gap-2.5">
-                    <CheckIcon weight="bold" aria-hidden className="size-4 shrink-0 text-leaf" />
+                    <CheckIcon weight="bold" aria-hidden className="size-4 shrink-0 text-link" />
                     {line}
                   </li>
                 ))}

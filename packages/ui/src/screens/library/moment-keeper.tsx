@@ -28,7 +28,7 @@ export function MomentKeeperDock({ keeper, compact = false, className }: { keepe
   return (
     <div
       className={cn(
-        "inline-flex max-w-full items-center rounded-full border border-cloud/80 bg-cloud/85 p-1 text-ink shadow-[0_2px_8px_rgb(20_20_20/0.12)] backdrop-blur-md",
+        "inline-flex max-w-full items-center rounded-full border border-border/80 bg-background/90 p-1 text-foreground shadow-[0_2px_8px_rgb(20_20_20/0.12)] backdrop-blur-md",
         !compact && "gap-1.5 p-1.5 pr-3 shadow-[0_4px_18px_rgb(20_20_20/0.14)]",
         className,
       )}

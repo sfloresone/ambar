@@ -80,7 +80,7 @@ export function KeepZone() {
   }, [keep]);
 
   return dragging ? (
-    <div aria-hidden className="pointer-events-none fixed inset-3 z-60 grid place-items-center rounded-3xl border-2 border-dashed border-leaf bg-cloud/80 backdrop-blur-sm">
+    <div aria-hidden className="pointer-events-none fixed inset-3 z-60 grid place-items-center rounded-3xl border-2 border-dashed border-leaf bg-background/80 backdrop-blur-sm">
       <p className="font-heading text-3xl font-bold">Drop to keep</p>
     </div>
   ) : null;

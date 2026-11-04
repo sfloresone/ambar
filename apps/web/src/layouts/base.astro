@@ -20,8 +20,21 @@ const {
     <meta name="description" content={description} />
     <!-- Sign-in links land here with ?verify=<token>; never send the URL on to anyone. -->
     <meta name="referrer" content="no-referrer" />
+    <meta name="color-scheme" content="light dark" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>{title}</title>
+    <script is:inline>
+      try {
+        const preference = localStorage.getItem("ambar.theme");
+        const dark = preference === "dark" || (preference !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.toggle("dark", dark);
+        document.documentElement.style.colorScheme = dark ? "dark" : "light";
+      } catch {
+        const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+        document.documentElement.classList.toggle("dark", dark);
+        document.documentElement.style.colorScheme = dark ? "dark" : "light";
+      }
+    </script>
   </head>
   <body class="min-h-svh">
     <slot />

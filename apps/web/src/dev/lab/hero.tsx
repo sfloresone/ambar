@@ -182,7 +182,7 @@ function MomentScreen({
           {content.kind}
         </div>
         {content.kind === "Link" && !phone && (
-          <p className="text-[clamp(0.4375rem,2cqw,0.625rem)] font-medium tracking-[0.14em] text-leaf uppercase">
+          <p className="text-[clamp(0.4375rem,2cqw,0.625rem)] font-medium tracking-[0.14em] text-link uppercase">
             Field notes
           </p>
         )}
@@ -609,7 +609,7 @@ export function HeroLab({ continueHref, backdropSrc, apiUrl }: HeroProps) {
           </p>
           <h2 className="text-5xl leading-[0.95] tracking-tight text-balance sm:text-7xl">
             A moment kept.
-            <span className="mt-2 block text-leaf">Still there.</span>
+            <span className="mt-2 block text-link">Still there.</span>
           </h2>
           <p className="max-w-md text-base text-pretty text-muted-foreground sm:text-lg">
             Keep photos, clips and links. Find them on any device. Share only

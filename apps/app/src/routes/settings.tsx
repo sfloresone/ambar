@@ -4,6 +4,7 @@ import { withIrisEntry } from "@ambar/ui/components/iris";
 import { useToast } from "@ambar/ui/components/toaster";
 import { createClients } from "@ambar/ui/lib/clients";
 import { SignInMethods } from "@ambar/ui/screens/settings/sign-in-methods";
+import { ThemeSelector } from "@ambar/ui/components/theme-selector";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 
@@ -56,6 +57,12 @@ export function SettingsRoute() {
         <Button tone="cloud" onClick={signOut} className="w-fit">
           Sign out
         </Button>
+      </div>
+
+      <div className="flex flex-col gap-3 rounded-2xl border bg-card p-6">
+        <h2 className="text-lg">Appearance</h2>
+        <p className="text-sm text-muted-foreground">Choose a color theme or follow your device settings.</p>
+        <ThemeSelector />
       </div>
 
       {/* The provider brings the browser back here, with the iris shut until Settings is on screen. */}

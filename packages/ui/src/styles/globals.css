@@ -116,6 +116,7 @@
 
 /* Light surface: landing and app. */
 :root {
+  color-scheme: light;
   --background: var(--color-cloud);
   --foreground: var(--color-ink);
   --card: var(--color-cloud);
@@ -153,6 +154,7 @@
 
 /* Dark surface: ink. Reserved for a future dark mode. */
 .dark {
+  color-scheme: dark;
   --background: var(--color-ink);
   --foreground: var(--color-cloud);
   --card: #1f1f1f;
@@ -170,8 +172,8 @@
   --destructive: #c2412d;
   --border: #303030;
   --input: #303030;
-  --ring: var(--color-leaf);
-  --link: var(--color-leaf);
+  --ring: var(--color-sky);
+  --link: var(--color-sky);
   --chart-1: var(--color-cloud);
   --chart-2: var(--color-sky);
   --chart-3: var(--color-leaf);

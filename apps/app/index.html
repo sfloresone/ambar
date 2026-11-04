@@ -6,8 +6,21 @@
     <meta name="description" content="A moment kept. Still there when you look." />
     <!-- Sign-in links land on /login?verify=<token>; never send the URL on to anyone. -->
     <meta name="referrer" content="no-referrer" />
+    <meta name="color-scheme" content="light dark" />
     <title>Ambar</title>
     <script>
+      // Apply the saved theme before the first paint. Storage can be unavailable in private contexts.
+      try {
+        const preference = localStorage.getItem("ambar.theme");
+        const dark = preference === "dark" || (preference !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.toggle("dark", dark);
+        document.documentElement.style.colorScheme = dark ? "dark" : "light";
+      } catch {
+        const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+        document.documentElement.classList.toggle("dark", dark);
+        document.documentElement.style.colorScheme = dark ? "dark" : "light";
+      }
+
       // Arriving from the landing's iris (?entry=iris, IRIS_ENTRY in @ambar/ui/components/iris): paint it closed
       // before any JS bundle or CSS loads,
       // so the handoff is ink → ink with the mark, never a white flash. The Iris component opens it.

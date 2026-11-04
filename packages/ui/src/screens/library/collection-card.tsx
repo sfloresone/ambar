@@ -49,7 +49,7 @@ export function NewCollectionCard({ onCreate }: { onCreate: () => void }) {
     <button
       type="button"
       onClick={onCreate}
-      className="mt-4 flex h-44 w-44 shrink-0 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed text-sm text-muted-foreground outline-hidden transition-colors hover:border-ink/30 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-solid focus-visible:outline-ring"
+      className="mt-4 flex h-44 w-44 shrink-0 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed text-sm text-muted-foreground outline-hidden transition-colors hover:border-foreground/30 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-solid focus-visible:outline-ring"
     >
       <PlusIcon weight="bold" aria-hidden className="size-5" />
       New collection

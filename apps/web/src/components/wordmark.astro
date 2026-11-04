@@ -11,9 +11,9 @@ const { variant = "color", size = "footer", class: className } = Astro.props;
 
 const mono = variant === "mono";
 
-const end = mono ? "text-current" : variant === "ink" ? "text-cloud" : "text-ink";
+const end = mono ? "text-current" : variant === "ink" ? "text-cloud" : "text-ink dark:text-cloud";
 
-const middle = mono ? "text-current" : "text-leaf";
+const middle = mono ? "text-current" : "text-link";
 
 const sky = mono ? "text-current" : "text-sky";
 

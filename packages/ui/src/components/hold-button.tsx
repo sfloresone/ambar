@@ -103,7 +103,7 @@ export function HoldButton({
       // aria-disabled instead of disabled: a disabled button drops keyboard focus.
       aria-disabled={done || undefined}
       className={cn(
-        "relative flex h-10 w-48 touch-none items-center justify-center overflow-hidden rounded-xl bg-cloud text-sm font-medium outline-hidden select-none",
+        "relative flex h-10 w-48 touch-none items-center justify-center overflow-hidden rounded-xl bg-cloud text-sm font-medium outline-hidden select-none dark:bg-secondary dark:text-foreground",
         RAISED_LIGHT,
         "focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-ring",
         !done && "cursor-pointer",

@@ -140,7 +140,7 @@ export function SearchPalette({ open, onOpenChange, destinations, onOpenMoment, 
             group: "Ask",
             label: `Ask Ambar: “${text}”`,
             hint: "⌘↵",
-            visual: <SparkleIcon weight="fill" className="size-5 text-leaf" />,
+            visual: <SparkleIcon weight="fill" className="size-5 text-link" />,
             select: () => void ask(text),
           },
         ];

@@ -4,6 +4,7 @@ import { PILL_BRAND, PILL_HEADER, PILL_HEADER_WRAP, PILL_LINK } from "@ambar/ui/
 import { apiUrl } from "@/lib/api-url.ts";
 import { appUrl } from "@/lib/app-url.ts";
 import Wordmark from "@/components/wordmark.astro";
+import { ThemeMenu } from "@ambar/ui/components/theme-menu";
 
 const home = Astro.url.pathname === "/" ? "" : "/";
 
@@ -47,6 +48,7 @@ const links = [
         ))
       }
     </nav>
+    <ThemeMenu client:only="react" />
     <!-- Sign in happens here, in the same flow as onboarding; the iris then hands off to the app. -->
     <FirstMomentDialog client:idle mode="sign-in" continueHref={appUrl} apiUrl={apiUrl} tone="cloud" size="sm" className="rounded-full" />
   </div>

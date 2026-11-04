@@ -172,7 +172,7 @@ function MomentKindIndicator({ moment, className }: { moment: Moment; className?
   const badge = {
     photo: { label: "IMAGE", color: "bg-leaf text-cloud" },
     clip: { label: "VIDEO", color: "bg-sky text-ink" },
-    link: { label: "URL", color: "border border-sky-deep/30 bg-cloud text-sky-deep" },
+    link: { label: "URL", color: "border border-sky-deep/30 bg-cloud text-sky-deep dark:border-sky/30 dark:bg-secondary dark:text-sky" },
     file: { label: "PDF", color: "bg-muted text-muted-foreground" },
   }[moment.kind];
 
@@ -260,7 +260,7 @@ function SavedMedia({ moment }: { moment: Moment }) {
         <>
           <PreviewImage key={moment.imageUrl} src={moment.imageUrl} alt={`Saved capture of ${momentLabel(moment)}`} />
           {moment.embed === undefined && moment.imageUrl !== undefined && (
-            <p className="absolute inset-x-3 bottom-3 rounded-xl bg-cloud/90 px-3 py-2 text-sm text-ink shadow-sm backdrop-blur">
+            <p className="absolute inset-x-3 bottom-3 rounded-xl bg-background/90 px-3 py-2 text-sm text-foreground shadow-sm backdrop-blur">
               This site can't be shown inside Ambar. Open the original to visit it.
             </p>
           )}
@@ -317,9 +317,9 @@ function LivePage({ moment }: { moment: LinkMoment }) {
         referrerPolicy="no-referrer"
         allow={embed.kind === "player" ? "autoplay; encrypted-media; fullscreen" : undefined}
         onLoad={() => setLoaded(true)}
-        className={cn("absolute inset-0 size-full border-0 bg-cloud transition-opacity duration-300 motion-reduce:transition-none", loaded ? "opacity-100" : "opacity-0")}
+        className={cn("absolute inset-0 size-full border-0 bg-background transition-opacity duration-300 motion-reduce:transition-none", loaded ? "opacity-100" : "opacity-0")}
       />
-      <p aria-live="polite" className={cn("absolute inset-x-3 bottom-3 rounded-xl bg-cloud/90 px-3 py-2 text-sm text-ink shadow-sm backdrop-blur", loaded && "sr-only")}>
+      <p aria-live="polite" className={cn("absolute inset-x-3 bottom-3 rounded-xl bg-background/90 px-3 py-2 text-sm text-foreground shadow-sm backdrop-blur", loaded && "sr-only")}>
         {loaded ? "Page loaded." : slow ? "Taking longer than usual. You can open the original instead." : "Loading the page…"}
       </p>
     </>

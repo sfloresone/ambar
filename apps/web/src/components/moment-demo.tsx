@@ -109,7 +109,7 @@ function MomentMedia({ kind, photoSrc, clipPosterSrc }: MomentMediaProps) {
         >
           {kind === "Link" ? (
             <div className="flex size-full flex-col justify-end gap-2 bg-muted p-5">
-              <LinkSimpleIcon weight="bold" aria-hidden className="size-6 text-leaf" />
+              <LinkSimpleIcon weight="bold" aria-hidden className="size-6 text-link" />
               <span className="font-heading text-xl font-bold text-balance">How to look up more often</span>
               <span className="text-sm text-muted-foreground">example.com/look-up</span>
             </div>

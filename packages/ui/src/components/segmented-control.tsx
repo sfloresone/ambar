@@ -65,7 +65,7 @@ export function SegmentedControl({ options, label, defaultValue, value: controll
               icon === undefined ? "inline-flex items-center gap-1.5 px-3.5 [&_svg]:size-4" : "grid w-9 place-items-center [&_svg]:size-4",
               "transition-[color,background-color,box-shadow] duration-300 ease-settle motion-reduce:transition-none",
               "hover:text-foreground focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-1 focus-visible:outline-ring",
-              "data-pressed:bg-cloud data-pressed:text-ink",
+              "data-pressed:bg-cloud data-pressed:text-ink dark:data-pressed:bg-secondary dark:data-pressed:text-foreground",
               SELECTED_RAISED,
             )}
           >

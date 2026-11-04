@@ -35,8 +35,8 @@ export type TactileTone = "ink" | "cloud" | "sky" | "leaf" | "danger";
 
 export const TONE: Record<TactileTone, string> = {
   // On a dark surface ink would vanish into the background; a 1px cloud edge keeps the key visible.
-  ink: cn("bg-ink text-cloud hover:brightness-125 dark:ring-1 dark:ring-cloud/20", RAISED_DARK),
-  cloud: cn("bg-cloud text-ink hover:brightness-[0.98]", RAISED_LIGHT),
+  ink: cn("bg-ink text-cloud hover:brightness-125 dark:bg-cloud dark:text-ink dark:hover:brightness-95", RAISED_DARK),
+  cloud: cn("bg-cloud text-ink hover:brightness-[0.98] dark:bg-secondary dark:text-foreground dark:hover:brightness-110", RAISED_LIGHT),
   sky: cn("bg-sky text-ink hover:brightness-[1.04]", RAISED_LIGHT),
   leaf: cn("bg-leaf text-cloud hover:brightness-110", RAISED_DARK),
   danger: cn("bg-destructive text-cloud hover:brightness-110", RAISED_DARK),

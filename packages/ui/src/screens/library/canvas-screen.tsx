@@ -126,7 +126,7 @@ export function CanvasScreen({ onOpenMoment }: CanvasScreenProps) {
       onPointerUp={up}
       onPointerCancel={up}
       onWheel={wheel}
-      className="fixed inset-0 cursor-grab touch-none overflow-hidden bg-muted/60 select-none active:cursor-grabbing [background-image:radial-gradient(rgb(20_20_20/0.12)_1px,transparent_1px)] [background-size:24px_24px]"
+      className="fixed inset-0 cursor-grab touch-none overflow-hidden bg-muted/60 select-none active:cursor-grabbing [background-image:radial-gradient(rgb(20_20_20/0.12)_1px,transparent_1px)] [background-size:24px_24px] dark:[background-image:radial-gradient(rgb(255_255_255/0.12)_1px,transparent_1px)]"
     >
       <h1 className="sr-only">Canvas</h1>
       {moments !== null && list.length === 0 && (

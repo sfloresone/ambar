@@ -113,7 +113,7 @@ function ViewerContent({ moment, onClose }: { moment: Moment; onClose: () => voi
                   onClick={() => toggle(collection)}
                   className={cn(
                     "flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm outline-hidden transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ring",
-                    inside ? "border-ink bg-ink text-cloud" : "hover:bg-muted",
+                    inside ? "border-ink bg-ink text-cloud dark:border-cloud dark:bg-cloud dark:text-ink" : "hover:bg-muted",
                   )}
                 >
                   {inside && <CheckIcon weight="bold" aria-hidden className="size-3.5" />}

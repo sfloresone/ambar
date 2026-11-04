@@ -17,8 +17,21 @@ const current = Astro.url.pathname.replace(/\/$/, "");
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
+    <meta name="color-scheme" content="light dark" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>{title} · Ambar design system</title>
+    <script is:inline>
+      try {
+        const preference = localStorage.getItem("ambar.theme");
+        const dark = preference === "dark" || (preference !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.toggle("dark", dark);
+        document.documentElement.style.colorScheme = dark ? "dark" : "light";
+      } catch {
+        const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+        document.documentElement.classList.toggle("dark", dark);
+        document.documentElement.style.colorScheme = dark ? "dark" : "light";
+      }
+    </script>
   </head>
   <body class="min-h-svh">
     <div class="mx-auto grid max-w-7xl gap-10 px-6 py-10 lg:grid-cols-[12rem_1fr]">

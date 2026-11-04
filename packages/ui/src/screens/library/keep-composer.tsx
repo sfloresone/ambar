@@ -26,13 +26,13 @@ type Extra = "tags" | "collection" | "note";
 const EXTRAS: Extra[] = ["tags", "collection", "note"];
 
 const GLASS =
-  "border border-ink/5 bg-cloud/95 shadow-[0_0_0_1px_rgb(20_20_20/0.03),0_1px_2px_rgb(20_20_20/0.05),0_12px_32px_rgb(20_20_20/0.10),inset_0_1px_0_rgb(255_255_255/0.7)] supports-[backdrop-filter]:bg-cloud/75 supports-[backdrop-filter]:backdrop-blur-xl supports-[backdrop-filter]:backdrop-saturate-150";
+  "border border-border bg-background/95 shadow-[0_0_0_1px_rgb(20_20_20/0.03),0_1px_2px_rgb(20_20_20/0.05),0_12px_32px_rgb(20_20_20/0.10),inset_0_1px_0_rgb(255_255_255/0.7)] supports-[backdrop-filter]:bg-background/75 supports-[backdrop-filter]:backdrop-blur-xl supports-[backdrop-filter]:backdrop-saturate-150 dark:shadow-[0_12px_32px_rgb(0_0_0/0.4)]";
 
 const CHIP =
   "flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm outline-hidden transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ring motion-reduce:transition-none";
 
 const FIELD =
-  "h-10 w-full min-w-0 rounded-xl border border-input bg-cloud px-3 text-base outline-hidden transition-[border-color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/40 motion-reduce:transition-none sm:text-sm";
+  "h-10 w-full min-w-0 rounded-xl border border-input bg-background px-3 text-base outline-hidden transition-[border-color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/40 motion-reduce:transition-none sm:text-sm";
 
 /** Closed: the pill. Open: the bar, as wide as the room allows (the gutter on both sides). */
 const WIDTH = { closed: "w-30", open: "w-[min(36rem,calc(100vw-2*var(--spacing-gutter)))]" } as const;
@@ -250,7 +250,7 @@ export function KeepComposer() {
                         type="button"
                         aria-pressed={inside}
                         onClick={() => setCollectionIds(toggle(collectionIds, collection.id))}
-                        className={cn(CHIP, inside ? "border-ink bg-ink text-cloud" : "hover:bg-muted")}
+                    className={cn(CHIP, inside ? "border-ink bg-ink text-cloud dark:border-cloud dark:bg-cloud dark:text-ink" : "hover:bg-muted")}
                       >
                         {inside && <CheckIcon weight="bold" aria-hidden className="size-3.5" />}
                         {collection.name}
@@ -287,7 +287,7 @@ export function KeepComposer() {
               onClick={() => setExtras(toggle(extras, extra))}
               className={cn(GLASS, CHIP, "text-muted-foreground hover:text-foreground", (extras.includes(extra) || filled[extra]) && "text-foreground")}
             >
-              {filled[extra] ? <CheckIcon weight="bold" aria-hidden className="size-3.5 text-leaf" /> : <PlusIcon weight="bold" aria-hidden className="size-3.5" />}
+              {filled[extra] ? <CheckIcon weight="bold" aria-hidden className="size-3.5 text-link" /> : <PlusIcon weight="bold" aria-hidden className="size-3.5" />}
               {chipLabel[extra]}
             </button>
           ))}
@@ -371,7 +371,7 @@ export function KeepComposer() {
               <MenuRoot>
                 <MenuTrigger
                   aria-label="Where to keep it"
-                  className="grid h-10 w-8 place-items-center rounded-r-full border-l border-cloud/15 bg-ink text-cloud outline-hidden hover:bg-ink/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ring"
+                  className="grid h-10 w-8 place-items-center rounded-r-full border-l border-cloud/15 bg-ink text-cloud outline-hidden hover:bg-ink/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-ring dark:border-ink/15 dark:bg-cloud dark:text-ink dark:hover:bg-cloud/90"
                 >
                   <CaretDownIcon weight="bold" aria-hidden className="size-3.5" />
                 </MenuTrigger>
